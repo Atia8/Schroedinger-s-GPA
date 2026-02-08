@@ -7,43 +7,51 @@ const ProfilePictureUpload = ({ currentImage = null, onImageUpdate }) => {
   const [previewUrl, setPreviewUrl] = useState(currentImage);
   const fileInputRef = useRef(null);
 
-  const handleFileSelect = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+const handleFileSelect = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file (JPEG, PNG, GIF)');
-      return;
+  // Validation...
+  setUploading(true);
+  setError('');
+
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const token = localStorage.getItem('token');
+    
+    const response = await fetch('http://localhost:5000/api/upload/profile-picture', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Upload failed');
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB');
-      return;
+    const imageUrl = data.imageUrl;
+    setPreviewUrl(imageUrl);
+    
+    // Save to localStorage as fallback
+    localStorage.setItem('profileImage', imageUrl);
+    
+    // Update parent
+    if (onImageUpdate) {
+      onImageUpdate(imageUrl);
     }
-
-    setUploading(true);
-    setError('');
-
-    try {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageUrl = e.target.result;
-        setPreviewUrl(imageUrl);
-        localStorage.setItem('profileImage', imageUrl);
-        if (onImageUpdate) {
-          onImageUpdate(imageUrl);
-        }
-      };
-      reader.readAsDataURL(file);
-
-      await new Promise(resolve => setTimeout(resolve, 1500));
-    } catch (err) {
-      setError('Upload failed. Please try again.');
-      console.error('Upload error:', err);
-    } finally {
-      setUploading(false);
-    }
-  };
+    
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setUploading(false);
+  }
+};
 
   const triggerFileInput = () => {
     if (!uploading) {

@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
+const uploadRoutes = require('./routes/uploadRoutes');
 
 const app = express();
 
@@ -53,6 +54,7 @@ mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost:27017/academic-
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Basic route
 app.get("/", (req, res) => {
