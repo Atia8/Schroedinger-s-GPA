@@ -65,7 +65,7 @@ export function LoginPage({ onLogin }) {  // No TypeScript interface
           <div className="flex items-center gap-3 mb-8">
             <Skull className="w-12 h-12 text-[#ff6b35]" />
             <h1 className="text-5xl text-white tracking-tight">
-              Academic <span className="text-[#ff6b35]">Victim</span>
+              Schrödinger's <span className="text-[#ff6b35]">GPA</span>
             </h1>
           </div>
           
@@ -106,7 +106,7 @@ export function LoginPage({ onLogin }) {  // No TypeScript interface
             <div className="flex items-center gap-2 justify-center mb-4">
               <Skull className="w-8 h-8 text-[#ff6b35]" />
               <h1 className="text-3xl text-white">
-                Academic <span className="text-[#ff6b35]">Victim</span>
+                Schrödinger's <span className="text-[#ff6b35]">GPA</span>
               </h1>
             </div>
           </div>

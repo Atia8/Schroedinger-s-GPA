@@ -29,6 +29,7 @@ export default function TasksPage() {
 }, []);
 
   const handleAddTask = async () => {
+     const token = localStorage.getItem('token'); 
     if (!newTitle || !newDeadline) return;
     try {
       const res = await fetch('http://localhost:5000/api/tasks', {
@@ -123,7 +124,7 @@ export default function TasksPage() {
                       <div className="flex items-center gap-4 text-sm text-[#8a8a9f]">
                         <div className="flex items-center gap-2">
                           <Calendar size={16} />
-                          Due: {task.deadline}
+                          Due: {task.deadline.slice(0, 10)}
                         </div>
                         <div className="flex items-center gap-2">
                           <TrendingUp size={16} />
