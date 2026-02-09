@@ -1,25 +1,32 @@
 const router = require('express').Router();
 const Task = require('../models/Task');
+const authMiddleware = require('../middleware/authMiddleware'); // ✅ Import Middleware
 
+// ✅ Apply Middleware to ALL routes here
+router.use(authMiddleware.authenticateToken);
 
-// ✅ CREATE TASK
+// CREATE TASK
 router.post('/', async (req, res) => {
     try {
-        const task = new Task(req.body);
+        // ✅ Add the User ID from the token to the new task
+        const task = new Task({
+            ...req.body,
+            user: req.user.userId 
+        });
+        
         const savedTask = await task.save();
-
         res.status(201).json(savedTask);
     } catch (err) {
+        console.error(err);
         res.status(500).json(err);
     }
 });
 
-
-// ✅ GET ALL TASKS
+// GET ALL TASKS (For the logged-in user only)
 router.get('/', async (req, res) => {
     try {
-        const tasks = await Task.find().sort({ createdAt: -1 });
-
+        // ✅ Only find tasks belonging to THIS user
+        const tasks = await Task.find({ user: req.user.userId }).sort({ createdAt: -1 });
         res.json(tasks);
     } catch (err) {
         res.status(500).json(err);

@@ -6,6 +6,7 @@ require("dotenv").config();
 const authRoutes = require("./routes/authRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const taskRoutes = require("./routes/taskRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes"); 
 
 const app = express();
 
@@ -32,6 +33,7 @@ mongoose
 app.use("/api/auth", authRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/dashboard", dashboardRoutes); 
 
 // Health check
 app.get("/", (req, res) => {
@@ -40,7 +42,8 @@ app.get("/", (req, res) => {
     endpoints: {
       auth: "/api/auth",
       upload: "/api/upload",
-      tasks: "/api/tasks"
+      tasks: "/api/tasks",
+      dashboard: "/api/dashboard" 
     }
   });
 });
