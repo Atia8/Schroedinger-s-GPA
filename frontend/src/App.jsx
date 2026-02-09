@@ -1,27 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { LoginPage } from './components/LoginPage';
-import Router from './router';
+import { useState, useEffect } from "react";
+import { LoginPage } from "./components/LoginPage";
+import Router from "./router";
 
-function App() {
+export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [sarcasmLevel, setSarcasmLevel] = useState(() => {
+    return localStorage.getItem("sarcasmLevel") || "brutal";
+  });
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) setIsLoggedIn(true);
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setIsLoggedIn(false);
   };
 
-  // ✅ No Navbar here
+  const handleSarcasmChange = (level) => {
+    setSarcasmLevel(level);
+    localStorage.setItem("sarcasmLevel", level);
+  };
+
   if (!isLoggedIn) {
     return <LoginPage onLogin={() => setIsLoggedIn(true)} />;
   }
 
-  // ✅ Navbar is inside Router
-  return <Router onLogout={handleLogout} />;
+  return (
+    <Router
+      onLogout={handleLogout}
+      sarcasmLevel={sarcasmLevel}
+      handleSarcasmChange={handleSarcasmChange}
+    />
+  );
 }
-
-export default App;
