@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Calendar, TrendingUp,X } from 'lucide-react';
+import { Plus, Calendar, TrendingUp,X,Trash2 } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
@@ -28,6 +28,22 @@ export default function TasksPage() {
     .catch(err => console.error(err));
 }, []);
 
+// --- DELETE TASK FUNCTION ---
+  const handleDeleteTask = async (taskId) => {
+    const token = localStorage.getItem('token');
+    try {
+      await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      // Remove from state
+      setTasks(prev => prev.filter(t => t._id !== taskId));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+
   const handleAddTask = async () => {
      const token = localStorage.getItem('token'); 
     if (!newTitle || !newDeadline) return;
@@ -49,6 +65,7 @@ export default function TasksPage() {
       console.error(err);
     }
   };
+
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -132,7 +149,17 @@ export default function TasksPage() {
                         </div>
                       </div>
                     </div>
-                    {getStatusBadge(task.status)}
+           {getStatusBadge(task.status)}
+           {/* Delete Button */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation(); // prevent drawer opening
+          handleDeleteTask(task._id);
+        }}
+        className="ml-2 text-red-500 hover:text-red-700"
+      >
+        <Trash2 size={20} />
+      </button>
                   </div>
                   
                   {/* Roast Panel - Signature Feature */}

@@ -21,7 +21,7 @@ const taskSchema = new mongoose.Schema({
   // ✅ CHANGED: We use 'status' instead of 'isCompleted' to match your Controller logic
   status: {
     type: String,
-    enum: ["pending", "in-progress", "completed","overdue","ignored"], 
+    enum: ["pending", "in-progress", "completed","overdue","ignored","panic"], 
     default: "pending"
   },
 
