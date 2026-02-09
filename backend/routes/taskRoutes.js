@@ -12,7 +12,9 @@ router.post('/', async (req, res) => {
         // ✅ Add the User ID from the token to the new task
         const task = new Task({
             ...req.body,
-            user: req.user.userId 
+            user: req.user.userId,
+            
+            status: new Date(req.body.deadline) < new Date() ? 'overdue' : 'ignored',
         });
         
         const savedTask = await task.save();
