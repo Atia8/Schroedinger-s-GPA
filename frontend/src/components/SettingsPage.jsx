@@ -103,21 +103,8 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <header className="mb-10">
-          <div className="flex items-center gap-3 mb-4">
-            <Settings className="w-8 h-8 text-cyan-400" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-orange-400 bg-clip-text text-transparent">
-              Academic Victim Tracker
-            </h1>
-          </div>
-          <p className="text-gray-400 italic mb-8">
-            Quantifying your chaos since 2024
-          </p>
           
           <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
-              <Settings className="w-5 h-5" />
-              Settings
-            </h2>
             <p className="text-gray-400">
               Customize your suffering experience.
             </p>
