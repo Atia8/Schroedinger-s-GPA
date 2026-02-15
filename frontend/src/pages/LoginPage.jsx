@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';  
+import { motion } from 'framer-motion';
 import { Skull, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-export function LoginPage({ onLogin }) {  // No TypeScript interface
+export function LoginPage({ onLogin }) {
+  const navigate = useNavigate();
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -10,7 +12,7 @@ export function LoginPage({ onLogin }) {  // No TypeScript interface
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {  // No "React.FormEvent" type
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -25,7 +27,7 @@ export function LoginPage({ onLogin }) {  // No TypeScript interface
         body: JSON.stringify({ 
           email, 
           password, 
-          ...(isSignup && { username:name }) 
+          ...(isSignup && { username: name }) // Fixed: removed extra space before name
         }),
       });
 
@@ -41,7 +43,8 @@ export function LoginPage({ onLogin }) {  // No TypeScript interface
       }
 
       onLogin();
-    } catch (err) {  // No ": any" type
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);

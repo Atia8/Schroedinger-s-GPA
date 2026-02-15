@@ -37,8 +37,7 @@ const userSchema = new mongoose.Schema({
   notificationPreferences: {
     deadlineReminders: { type: Boolean, default: true },
     dailyRoasts: { type: Boolean, default: false },
-    despairAlerts: { type: Boolean, default: true },
-    soundEffects: { type: Boolean, default: false }
+    despairAlerts: { type: Boolean, default: true }
   }
 }, {
   timestamps: true

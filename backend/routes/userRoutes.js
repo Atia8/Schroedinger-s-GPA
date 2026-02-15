@@ -16,7 +16,7 @@ router.get('/profile', authMiddleware.authenticateToken, async (req, res) => {
     
     res.json({
       success: true,
-      user: user.toJSON()
+      user
     });
   } catch (error) {
     console.error('Profile fetch error:', error);
@@ -48,7 +48,7 @@ router.patch('/username', authMiddleware.authenticateToken, async (req, res) => 
     res.json({
       success: true,
       message: 'Username updated. New identity, same procrastination.',
-      user: user.toJSON()
+      user
     });
   } catch (error) {
     console.error('Username update error:', error);
@@ -74,13 +74,13 @@ router.patch('/sarcasm', authMiddleware.authenticateToken, async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.user.userId,
       { sarcasmLevel },
-      { new: true }
+      { new: true } 
     );
     
     res.json({
       success: true,
       message: `Roast mode set to ${sarcasmLevel}. Your NPCs will adjust accordingly.`,
-      user: user.toJSON()
+      user
     });
   } catch (error) {
     console.error('Sarcasm update error:', error);
@@ -112,7 +112,7 @@ router.patch('/notifications', authMiddleware.authenticateToken, async (req, res
     res.json({
       success: true,
       message: 'Notification preferences updated.',
-      user: user.toJSON()
+      user
     });
   } catch (error) {
     console.error('Notification update error:', error);
@@ -173,7 +173,7 @@ router.patch('/email', authMiddleware.authenticateToken, async (req, res) => {
     res.json({
       success: true,
       message: 'Email updated successfully.',
-      user: user.toJSON()
+      user
     });
 
   } catch (error) {
@@ -272,7 +272,7 @@ router.delete('/account', authMiddleware.authenticateToken, async (req, res) => 
       });
     }
 
-    // Delete user's tasks (if you have a Task model)
+    // Delete user's tasks ( Task model)
     // await Task.deleteMany({ user: user._id });
     
     await User.findByIdAndDelete(user._id);
