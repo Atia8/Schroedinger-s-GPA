@@ -7,51 +7,56 @@ const ProfilePictureUpload = ({ currentImage = null, onImageUpdate }) => {
   const [previewUrl, setPreviewUrl] = useState(currentImage);
   const fileInputRef = useRef(null);
 
-const handleFileSelect = async (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
+  const handleFileSelect = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
 
-  // Validation...
-  setUploading(true);
-  setError('');
+    setUploading(true);
+    setError('');
 
-  try {
-    const formData = new FormData();
-    formData.append('image', file);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
 
-    const token = localStorage.getItem('token');
-    
-    const response = await fetch('http://localhost:5000/api/upload/profile-picture', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
-      body: formData
-    });
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch('http://localhost:5000/api/upload/profile-picture', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'Upload failed');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Upload failed');
+      }
+
+      const imageUrl = data.imageUrl;
+      // Clean the publicId - remove any file extension
+      let publicId = data.publicId;
+      if (publicId && publicId.includes('.')) {
+        publicId = publicId.split('.')[0];
+      }
+      
+      setPreviewUrl(imageUrl);
+      
+      // Save to localStorage
+      localStorage.setItem('profileImage', imageUrl);
+      localStorage.setItem('profilePublicId', publicId);
+      
+      if (onImageUpdate) {
+        onImageUpdate(imageUrl);
+      }
+      
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
     }
-
-    const imageUrl = data.imageUrl;
-    setPreviewUrl(imageUrl);
-    
-    // Save to localStorage as fallback
-    localStorage.setItem('profileImage', imageUrl);
-    
-    // Update parent
-    if (onImageUpdate) {
-      onImageUpdate(imageUrl);
-    }
-    
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setUploading(false);
-  }
-};
+  };
 
   const triggerFileInput = () => {
     if (!uploading) {
@@ -59,16 +64,72 @@ const handleFileSelect = async (event) => {
     }
   };
 
-  const handleRemoveImage = () => {
-    if (window.confirm('Are you sure you want to remove your profile picture?')) {
+const handleRemoveImage = async () => {
+  if (window.confirm('Are you sure you want to remove your profile picture?')) {
+    setUploading(true);
+    setError('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      // Get publicId from localStorage
+      let publicId = localStorage.getItem('profilePublicId');
+      
+      // If not in localStorage, try to extract from currentImage
+      if (!publicId && currentImage) {
+        // Extract publicId from Cloudinary URL
+        // Cloudinary URL format: https://res.cloudinary.com/.../v123456/folder/filename
+        const urlParts = currentImage.split('/');
+        const filenameWithVersion = urlParts[urlParts.length - 1];
+        // Remove version if present (v123456_)
+        const filename = filenameWithVersion.replace(/^v\d+_/, '');
+        publicId = filename.split('.')[0];
+        localStorage.setItem('profilePublicId', publicId);
+      }
+      
+      if (!publicId) {
+        throw new Error('Unable to find image ID. Please try uploading again.');
+      }
+
+      console.log('Deleting image with publicId:', publicId);
+      
+      // Use DELETE method with the correct URL structure
+      const response = await fetch(`http://localhost:5000/api/upload/profile-picture/${encodeURIComponent(publicId)}`, {
+        method: 'DELETE',  // Changed from POST to DELETE
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Delete failed');
+      }
+
+      const data = await response.json();
+      console.log('Delete successful:', data);
+
+      // Clear local state
       setPreviewUrl(null);
       localStorage.removeItem('profileImage');
+      localStorage.removeItem('profilePublicId');
+      
       if (onImageUpdate) {
         onImageUpdate(null);
       }
-      setError('');
+      
+    } catch (err) {
+      console.error('Delete error:', err);
+      setError(err.message);
+    } finally {
+      setUploading(false);
     }
-  };
+  }
+};
 
   const displayImage = previewUrl || currentImage;
 
@@ -85,9 +146,7 @@ const handleFileSelect = async (event) => {
             src={displayImage} 
             alt="Profile" 
             className="w-full h-full object-cover"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = null;
+            onError={() => {
               setPreviewUrl(null);
               localStorage.removeItem('profileImage');
             }}

@@ -17,9 +17,15 @@ router.post('/profile-picture',
         });
       }
 
-      const user= await User.findByIdAndUpdate(
+      // Get the publicId without extension
+      const publicId = req.file.filename.split('.')[0];
+
+      const user = await User.findByIdAndUpdate(
         req.user.userId,
-        { profilePicture: req.file.path },
+        { 
+          profilePicture: req.file.path,
+          profilePublicId: publicId // Store this in your User model
+        },
         { new: true }
       );
 
@@ -27,7 +33,7 @@ router.post('/profile-picture',
         success: true,
         message: 'Profile picture uploaded successfully',
         imageUrl: req.file.path,
-        publicId: req.file.filename,
+        publicId: publicId, // Send clean publicId
         user: user.toJSON()
       });
     } catch (error) {
@@ -40,18 +46,25 @@ router.post('/profile-picture',
   }
 );
 
-// Delete profile picture
+// Delete profile picture - FIXED VERSION
 router.delete('/profile-picture/:publicId', 
   authMiddleware.authenticateToken,
   async (req, res) => {
     try {
       const { publicId } = req.params;
+      
+      // Decode the URL parameter
+      const decodedPublicId = decodeURIComponent(publicId);
+      
       // Delete from Cloudinary
-      const result = await cloudinary.uploader.destroy(publicId);
+      const result = await cloudinary.uploader.destroy(decodedPublicId);
 
       const user = await User.findByIdAndUpdate(
         req.user.userId,
-        { profilePicture: null },
+        { 
+          profilePicture: null,
+          profilePublicId: null 
+        },
         { new: true }
       );
       
@@ -62,6 +75,7 @@ router.delete('/profile-picture/:publicId',
         user: user.toJSON()
       });
     } catch (error) {
+      console.error('Delete error:', error);
       res.status(500).json({ 
         success: false, 
         message: 'Delete failed' 
