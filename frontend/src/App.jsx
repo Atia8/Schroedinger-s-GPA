@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { LoginPage } from "./components/LoginPage";
+import { LoginPage } from "./pages/LoginPage";
 import Router from "./router";
 
 export default function App() {

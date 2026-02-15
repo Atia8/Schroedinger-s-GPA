@@ -10,7 +10,8 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true
+    required: true,
+    minlength: 6
   },
   username: {
     type: String,
@@ -22,10 +23,22 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  //Track last login
   lastLogin: {
     type: Date,
     default: null
+  },
+  // Roast/sarcasm preference
+  sarcasmLevel: {
+    type: String,
+    enum: ['mild', 'brutal', 'damage'],
+    default: 'brutal'
+  },
+  // Notification preferences
+  notificationPreferences: {
+    deadlineReminders: { type: Boolean, default: true },
+    dailyRoasts: { type: Boolean, default: false },
+    despairAlerts: { type: Boolean, default: true },
+    soundEffects: { type: Boolean, default: false }
   }
 }, {
   timestamps: true

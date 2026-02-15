@@ -3,7 +3,7 @@ import Navbar from "./components/Navbar";
 import Home from "./pages/HomePage";
 import Dashboard from "./pages/Dashboard"; 
 import TasksPage from "./pages/TasksPage";
-import SettingsPage from "./components/SettingsPage";
+import SettingsPage from "./pages/SettingsPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 
 

@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const User = require('../models/User');
-const bcrypt = require('bcryptjs');
 
 // Get current user profile
 router.get('/profile', authMiddleware.authenticateToken, async (req, res) => {
@@ -60,62 +59,120 @@ router.patch('/username', authMiddleware.authenticateToken, async (req, res) => 
   }
 });
 
+// Update sarcasm/roast level
+router.patch('/sarcasm', authMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const { sarcasmLevel } = req.body;
+    
+    if (!['mild', 'brutal', 'damage'].includes(sarcasmLevel)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid sarcasm level. Choose mild, brutal, or damage.' 
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      { sarcasmLevel },
+      { new: true }
+    );
+    
+    res.json({
+      success: true,
+      message: `Roast mode set to ${sarcasmLevel}. Your NPCs will adjust accordingly.`,
+      user: user.toJSON()
+    });
+  } catch (error) {
+    console.error('Sarcasm update error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update roast settings.' 
+    });
+  }
+});
+
+// Update notification preferences
+router.patch('/notifications', authMiddleware.authenticateToken, async (req, res) => {
+  try {
+    const { deadlineReminders, dailyRoasts, despairAlerts, soundEffects } = req.body;
+    
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      { 
+        notificationPreferences: {
+          deadlineReminders,
+          dailyRoasts,
+          despairAlerts,
+          soundEffects
+        }
+      },
+      { new: true }
+    );
+    
+    res.json({
+      success: true,
+      message: 'Notification preferences updated.',
+      user: user.toJSON()
+    });
+  } catch (error) {
+    console.error('Notification update error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update notification preferences.' 
+    });
+  }
+});
+
 // Change email
 router.patch('/email', authMiddleware.authenticateToken, async (req, res) => {
   try {
     const { newEmail, password } = req.body;
     
-    // Validation
     if (!newEmail || !password) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Email and password are required. Did you forget something?' 
+        message: 'Email and password are required.' 
       });
     }
 
-    // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newEmail)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Invalid email format. Even your typos are disappointing.' 
+        message: 'Invalid email format.' 
       });
     }
 
-    // Get user
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ 
         success: false, 
-        message: 'User not found. Did you exist in the first place?' 
+        message: 'User not found.' 
       });
     }
 
-    // Verify password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({ 
         success: false, 
-        message: 'Invalid password. Security first, memory second.' 
+        message: 'Invalid password.' 
       });
     }
 
-    // Check if new email is already taken
     const existingUser = await User.findOne({ email: newEmail });
     if (existingUser) {
       return res.status(409).json({ 
         success: false, 
-        message: 'Email already in use. Be original for once.' 
+        message: 'Email already in use.' 
       });
     }
 
-    // Update email
     user.email = newEmail;
     await user.save();
 
     res.json({
       success: true,
-      message: 'Email updated successfully. Check your new inbox of regrets.',
+      message: 'Email updated successfully.',
       user: user.toJSON()
     });
 
@@ -123,7 +180,7 @@ router.patch('/email', authMiddleware.authenticateToken, async (req, res) => {
     console.error('Email change error:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Failed to change email. The universe is against you.' 
+      message: 'Failed to change email.' 
     });
   }
 });
@@ -133,53 +190,49 @@ router.patch('/password', authMiddleware.authenticateToken, async (req, res) => 
   try {
     const { currentPassword, newPassword } = req.body;
     
-    // Validation
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Both passwords are required. Not optional, unlike your assignments.' 
+        message: 'Both passwords are required.' 
       });
     }
 
     if (newPassword.length < 6) {
       return res.status(400).json({ 
         success: false, 
-        message: 'New password must be at least 6 characters. Make it strong, like your denial.' 
+        message: 'New password must be at least 6 characters.' 
       });
     }
 
-    // Get user
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ 
         success: false, 
-        message: 'User not found. Did you delete yourself?' 
+        message: 'User not found.' 
       });
     }
 
-    // Verify current password
     const isPasswordValid = await user.comparePassword(currentPassword);
     if (!isPasswordValid) {
       return res.status(401).json({ 
         success: false, 
-        message: 'Current password is incorrect. Memory issues again?' 
+        message: 'Current password is incorrect.' 
       });
     }
 
-    // Update password (will be hashed by pre-save hook)
     user.password = newPassword;
     await user.save();
 
     res.json({
       success: true,
-      message: 'Password changed successfully. Try not to forget this one.'
+      message: 'Password changed successfully.'
     });
 
   } catch (error) {
     console.error('Password change error:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Failed to change password. Blame the encryption.' 
+      message: 'Failed to change password.' 
     });
   }
 });
@@ -189,55 +242,51 @@ router.delete('/account', authMiddleware.authenticateToken, async (req, res) => 
   try {
     const { password, confirmText } = req.body;
     
-    // Validation
     if (!password) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Password is required. We need to be sure it\'s really you.' 
+        message: 'Password is required.' 
       });
     }
 
     if (confirmText !== 'DELETE') {
       return res.status(400).json({ 
         success: false, 
-        message: 'Please type DELETE to confirm. Reading is fundamental.' 
+        message: 'Please type DELETE to confirm.' 
       });
     }
 
-    // Get user
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ 
         success: false, 
-        message: 'User not found. Did you already delete yourself?' 
+        message: 'User not found.' 
       });
     }
 
-    // Verify password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({ 
         success: false, 
-        message: 'Invalid password. One last security check.' 
+        message: 'Invalid password.' 
       });
     }
 
-    // TODO: Delete all user-related data (tasks, etc.)
-    // await Task.deleteMany({ userId: user._id });
+    // Delete user's tasks (if you have a Task model)
+    // await Task.deleteMany({ user: user._id });
     
-    // Delete user
     await User.findByIdAndDelete(user._id);
 
     res.json({
       success: true,
-      message: 'Account deleted successfully. Your suffering has ended... for now.'
+      message: 'Account deleted successfully.'
     });
 
   } catch (error) {
     console.error('Account deletion error:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Failed to delete account. Even escape is hard.' 
+      message: 'Failed to delete account.' 
     });
   }
 });

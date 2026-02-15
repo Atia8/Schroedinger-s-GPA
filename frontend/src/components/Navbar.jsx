@@ -79,7 +79,7 @@
 
 import { Link, useLocation, useNavigate } from 'react-router';
 import { LayoutDashboard, CheckSquare, MessageSquare, BarChart3, Settings, LogOut } from 'lucide-react';
-
+import { GraduationCap } from 'lucide-react'; 
 export default function Navbar({ onLogout }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -102,7 +102,7 @@ export default function Navbar({ onLogout }) {
         <div className="flex items-center justify-between h-16">
           <Link to="/dashboard" className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00d4ff] to-[#9d4edd] flex items-center justify-center">
-              <span className="text-lg">📊</span>
+              <GraduationCap className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-[#00d4ff] to-[#9d4edd] bg-clip-text text-transparent">
               Schrödinger's GPA
