@@ -1,9 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import ProfilePictureUpload from './ProfilePictureUpload';
-import { Settings, User, Bell, Volume2, LogOut, Mail, Key, Download, Trash2, Sparkles } from 'lucide-react';
+import { User, Bell, LogOut, Mail, Key, Download, Trash2, Sparkles } from 'lucide-react';
+
+// Import modals
+import ChangeEmailModal from './modals/ChangeEmailModal';
+import ChangePasswordModal from './modals/ChangePasswordModal';
+import DeleteAccountModal from './modals/DeleteAccountModal';
 
 const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onLogout = () => {} }) => {
-  // Load from localStorage or use defaults
+  // Loading and UI states
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Modal visibility states
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // User data states
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
     const saved = localStorage.getItem('notificationsEnabled');
     return saved !== null ? JSON.parse(saved) : true;
@@ -14,14 +30,159 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
     return saved !== null ? JSON.parse(saved) : false;
   });
 
-  const [username, setUsername] = useState(() => {
-    return localStorage.getItem('username') || 'Suffering Student';
-  });
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [profileImage, setProfileImage] = useState(null);
+  const [userId, setUserId] = useState('');
 
-  const [email] = useState('your.email@regret.edu');
-  const [profileImage, setProfileImage] = useState(() => {
-    return localStorage.getItem('profileImage') || null;
-  });
+  // Fetch user data from backend on mount
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch('http://localhost:5000/api/users/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const user = data.user;
+        
+        setUsername(user.username || 'Suffering Student');
+        setEmail(user.email || '');
+        setProfileImage(user.profilePicture || null);
+        setUserId(user._id || '');
+        
+        // Update localStorage as backup
+        localStorage.setItem('username', user.username);
+        if (user.profilePicture) {
+          localStorage.setItem('profileImage', user.profilePicture);
+        }
+      } else {
+        // Handle unauthorized - maybe redirect to login
+        if (response.status === 401) {
+          localStorage.clear();
+          window.location.href = '/login';
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      // Fallback to localStorage
+      setUsername(localStorage.getItem('username') || 'Suffering Student');
+      setProfileImage(localStorage.getItem('profileImage') || null);
+      setEmail(localStorage.getItem('email') || 'your.email@regret.edu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Save preferences to localStorage
+  useEffect(() => {
+    localStorage.setItem('notificationsEnabled', JSON.stringify(notificationsEnabled));
+  }, [notificationsEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('soundEnabled', JSON.stringify(soundEnabled));
+  }, [soundEnabled]);
+
+  // Handle profile picture update
+  const handleProfileUpdate = (imageUrl) => {
+    setProfileImage(imageUrl);
+    if (imageUrl) {
+      localStorage.setItem('profileImage', imageUrl);
+    } else {
+      localStorage.removeItem('profileImage');
+    }
+  };
+
+  // Update username in backend
+  const handleUpdateProfile = async () => {
+    setError('');
+    setSuccess('');
+    setUpdating(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      if (!username.trim()) {
+        throw new Error('Username cannot be empty');
+      }
+
+      const response = await fetch('http://localhost:5000/api/users/username', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ username: username.trim() })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update username');
+      }
+
+      // Update localStorage
+      localStorage.setItem('username', username.trim());
+      
+      // Update user in localStorage
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        user.username = username.trim();
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+
+      setSuccess('Username updated successfully!');
+      
+      // Refresh user data
+      await fetchUserData();
+    } catch (err) {
+      setError(err.message);
+      console.error('Update error:', err);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Modal success handlers
+  const handleEmailChangeSuccess = (message) => {
+    setSuccess(message);
+    fetchUserData(); // Refresh user data to get new email
+  };
+
+  const handlePasswordChangeSuccess = (message) => {
+    setSuccess(message);
+  };
+
+  const handleDeleteSuccess = (message) => {
+    // Clear everything and redirect
+    localStorage.clear();
+    window.location.href = '/login';
+  };
+
+  const handleExportData = () => {
+    // TODO: Implement data export
+    alert('Export Data functionality coming soon!');
+  };
+
+  const handleRefreshPreview = () => {
+    setSuccess('Preview refreshed! Settings applied.');
+  };
 
   const sarcasmOptions = [
     {
@@ -49,61 +210,22 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
 
   const currentSarcasm = sarcasmOptions.find(opt => opt.id === sarcasmLevel) || sarcasmOptions[1];
 
-  // Save to localStorage when state changes
-  useEffect(() => {
-    localStorage.setItem('notificationsEnabled', JSON.stringify(notificationsEnabled));
-  }, [notificationsEnabled]);
-
-  useEffect(() => {
-    localStorage.setItem('soundEnabled', JSON.stringify(soundEnabled));
-  }, [soundEnabled]);
-
-  useEffect(() => {
-    localStorage.setItem('username', username);
-  }, [username]);
-
-  const handleProfileUpdate = (imageUrl) => {
-    setProfileImage(imageUrl);
-    if (imageUrl) {
-      localStorage.setItem('profileImage', imageUrl);
-    } else {
-      localStorage.removeItem('profileImage');
-    }
-  };
-
-  const handleUpdateProfile = () => {
-    alert(`Username updated to: ${username}`);
-  };
-
-  const handleChangeEmail = () => {
-    alert('Change Email clicked - This would open a modal or redirect');
-  };
-
-  const handleChangePassword = () => {
-    alert('Change Password clicked - This would open a modal or redirect');
-  };
-
-  const handleExportData = () => {
-    alert('Export Data clicked - This would generate and download a file');
-  };
-
-  const handleDeleteAccount = () => {
-    const confirmDelete = window.confirm('Are you sure you want to delete your account? This action cannot be undone.');
-    if (confirmDelete) {
-      alert('Account deletion initiated - This would call an API');
-    }
-  };
-
-  const handleRefreshPreview = () => {
-    alert('Preview refreshed - Settings applied');
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading your despair profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-black text-gray-100 font-sans">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <header className="mb-10">
-          
           <div className="mb-8">
             <p className="text-gray-400">
               Customize your suffering experience.
@@ -111,6 +233,19 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
           </div>
           <div className="h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent"></div>
         </header>
+
+        {/* Success/Error Messages */}
+        {error && (
+          <div className="mb-6 p-4 bg-rose-900/30 border border-rose-700 rounded-lg text-rose-200">
+            {error}
+          </div>
+        )}
+        
+        {success && (
+          <div className="mb-6 p-4 bg-emerald-900/30 border border-emerald-700 rounded-lg text-emerald-200">
+            {success}
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Left Column - Profile Section */}
@@ -155,12 +290,14 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="Enter new suffering alias"
                         className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                        disabled={updating}
                       />
                       <button 
                         onClick={handleUpdateProfile}
-                        className="px-6 bg-gradient-to-r from-cyan-500 to-cyan-600 text-gray-900 font-semibold rounded-xl hover:from-cyan-400 hover:to-cyan-500 transition-all"
+                        disabled={updating || !username.trim()}
+                        className="px-6 bg-gradient-to-r from-cyan-500 to-cyan-600 text-gray-900 font-semibold rounded-xl hover:from-cyan-400 hover:to-cyan-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Update
+                        {updating ? 'Updating...' : 'Update'}
                       </button>
                     </div>
                   </div>
@@ -300,7 +437,7 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
               
               <div className="space-y-4">
                 <button
-                  onClick={handleChangeEmail}
+                  onClick={() => setShowEmailModal(true)}
                   className="w-full p-4 text-left bg-gray-900/50 rounded-xl border border-gray-700 hover:border-cyan-400/50 hover:bg-gray-800/50 transition-all group"
                 >
                   <div className="flex items-center gap-3 mb-1">
@@ -311,7 +448,7 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
                 </button>
                 
                 <button
-                  onClick={handleChangePassword}
+                  onClick={() => setShowPasswordModal(true)}
                   className="w-full p-4 text-left bg-gray-900/50 rounded-xl border border-gray-700 hover:border-amber-400/50 hover:bg-gray-800/50 transition-all group"
                 >
                   <div className="flex items-center gap-3 mb-1">
@@ -333,7 +470,7 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
                 </button>
                 
                 <button
-                  onClick={handleDeleteAccount}
+                  onClick={() => setShowDeleteModal(true)}
                   className="w-full p-4 text-left bg-rose-900/20 rounded-xl border border-rose-800/50 hover:border-rose-600 hover:bg-rose-900/30 transition-all group"
                 >
                   <div className="flex items-center gap-3 mb-1">
@@ -372,6 +509,26 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      <ChangeEmailModal
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        onSuccess={handleEmailChangeSuccess}
+        currentEmail={email}
+      />
+
+      <ChangePasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onSuccess={handlePasswordChangeSuccess}
+      />
+
+      <DeleteAccountModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onSuccess={handleDeleteSuccess}
+      />
     </div>
   );
 };

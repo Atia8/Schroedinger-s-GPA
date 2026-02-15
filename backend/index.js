@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes"); 
@@ -31,6 +32,7 @@ mongoose
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/dashboard", dashboardRoutes); 

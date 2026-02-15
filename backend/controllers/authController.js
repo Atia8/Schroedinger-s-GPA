@@ -7,7 +7,7 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "24h";
 class AuthController {
   async register(req, res) {
     try {
-      const { email, password } = req.body;
+      const { email, password, username } = req.body;
       
       // Check if user exists
       const existingUser = await User.findOne({ email });
@@ -22,7 +22,7 @@ class AuthController {
       const user = await User.create({
         email,
         password,
-        username: `Academic Victim ${Date.now().toString().slice(-4)}`
+        username: username || `Academic Victim ${Date.now().toString().slice(-4)}`
       });
 
       // Generate token

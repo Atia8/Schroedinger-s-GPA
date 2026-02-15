@@ -17,6 +17,15 @@ const userSchema = new mongoose.Schema({
     default: function() {
       return `Academic Victim ${Date.now().toString().slice(-4)}`;
     }
+  },
+  profilePicture: {
+    type: String,
+    default: null
+  },
+  //Track last login
+  lastLogin: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

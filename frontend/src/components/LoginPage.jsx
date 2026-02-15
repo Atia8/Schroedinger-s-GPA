@@ -25,7 +25,7 @@ export function LoginPage({ onLogin }) {  // No TypeScript interface
         body: JSON.stringify({ 
           email, 
           password, 
-          ...(isSignup && { name }) 
+          ...(isSignup && { username:name }) 
         }),
       });
 

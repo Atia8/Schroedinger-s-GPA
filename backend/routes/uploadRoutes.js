@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
-const { upload } = require('../utils/cloudinary');
+const {cloudinary, upload } = require('../utils/cloudinary');
+const User = require('../models/User');
 
 // Upload profile picture
 router.post('/profile-picture', 
   authMiddleware.authenticateToken,
   upload.single('image'),
-  (req, res) => {
+  async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ 
@@ -16,11 +17,18 @@ router.post('/profile-picture',
         });
       }
 
+      const user= await User.findByIdAndUpdate(
+        req.user.userId,
+        { profilePicture: req.file.path },
+        { new: true }
+      );
+
       res.json({
         success: true,
         message: 'Profile picture uploaded successfully',
         imageUrl: req.file.path,
-        publicId: req.file.filename
+        publicId: req.file.filename,
+        user: user.toJSON()
       });
     } catch (error) {
       console.error('Upload error:', error);
@@ -40,11 +48,18 @@ router.delete('/profile-picture/:publicId',
       const { publicId } = req.params;
       // Delete from Cloudinary
       const result = await cloudinary.uploader.destroy(publicId);
+
+      const user = await User.findByIdAndUpdate(
+        req.user.userId,
+        { profilePicture: null },
+        { new: true }
+      );
       
       res.json({
         success: true,
         message: 'Profile picture deleted',
-        result
+        result,
+        user: user.toJSON()
       });
     } catch (error) {
       res.status(500).json({ 
