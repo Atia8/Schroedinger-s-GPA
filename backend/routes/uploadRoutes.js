@@ -17,23 +17,37 @@ router.post('/profile-picture',
         });
       }
 
-      // Get the publicId without extension
-      const publicId = req.file.filename.split('.')[0];
+      // Get data from Cloudinary
+      const imageUrl = req.file.path;           // For displaying
+      const publicId = req.file.filename;       // For deleting/updating
 
+      console.log('Saving to database:', {
+        profilePicture: imageUrl,
+        profilePublicId: publicId
+      });
+
+      // Update user with BOTH fields
       const user = await User.findByIdAndUpdate(
         req.user.userId,
         { 
-          profilePicture: req.file.path,
-          profilePublicId: publicId // Store this in your User model
+          profilePicture: imageUrl,
+          profilePublicId: publicId  // NOW THIS WORKS!
         },
         { new: true }
       );
 
+      if (!user) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User not found' 
+        });
+      }
+
       res.json({
         success: true,
         message: 'Profile picture uploaded successfully',
-        imageUrl: req.file.path,
-        publicId: publicId, // Send clean publicId
+        imageUrl: imageUrl,
+        publicId: publicId,
         user: user.toJSON()
       });
     } catch (error) {
@@ -46,20 +60,34 @@ router.post('/profile-picture',
   }
 );
 
-// Delete profile picture - FIXED VERSION
-router.delete('/profile-picture/:publicId', 
+router.delete('/profile-picture',  // No :publicId param needed
   authMiddleware.authenticateToken,
   async (req, res) => {
     try {
-      const { publicId } = req.params;
+      // 1. Get the user first to find their public_id
+      const user = await User.findById(req.user.userId);
       
-      // Decode the URL parameter
-      const decodedPublicId = decodeURIComponent(publicId);
-      
-      // Delete from Cloudinary
-      const result = await cloudinary.uploader.destroy(decodedPublicId);
+      if (!user) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User not found' 
+        });
+      }
 
-      const user = await User.findByIdAndUpdate(
+      if (!user.profilePublicId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'No profile picture to delete' 
+        });
+      }
+
+      console.log('Deleting image with publicId:', user.profilePublicId);
+
+      // 2. Delete from Cloudinary using the stored public_id
+      const result = await cloudinary.uploader.destroy(user.profilePublicId);
+
+      // 3. Clear BOTH fields from user document
+      const updatedUser = await User.findByIdAndUpdate(
         req.user.userId,
         { 
           profilePicture: null,
@@ -72,7 +100,7 @@ router.delete('/profile-picture/:publicId',
         success: true,
         message: 'Profile picture deleted',
         result,
-        user: user.toJSON()
+        user: updatedUser.toJSON()
       });
     } catch (error) {
       console.error('Delete error:', error);
@@ -83,5 +111,4 @@ router.delete('/profile-picture/:publicId',
     }
   }
 );
-
 module.exports = router;

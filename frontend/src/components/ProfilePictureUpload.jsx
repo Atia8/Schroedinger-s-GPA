@@ -67,63 +67,34 @@ const ProfilePictureUpload = ({ currentImage = null, onImageUpdate }) => {
 const handleRemoveImage = async () => {
   if (window.confirm('Are you sure you want to remove your profile picture?')) {
     setUploading(true);
-    setError('');
     
     try {
       const token = localStorage.getItem('token');
       
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      // Get publicId from localStorage
-      let publicId = localStorage.getItem('profilePublicId');
-      
-      // If not in localStorage, try to extract from currentImage
-      if (!publicId && currentImage) {
-        // Extract publicId from Cloudinary URL
-        // Cloudinary URL format: https://res.cloudinary.com/.../v123456/folder/filename
-        const urlParts = currentImage.split('/');
-        const filenameWithVersion = urlParts[urlParts.length - 1];
-        // Remove version if present (v123456_)
-        const filename = filenameWithVersion.replace(/^v\d+_/, '');
-        publicId = filename.split('.')[0];
-        localStorage.setItem('profilePublicId', publicId);
-      }
-      
-      if (!publicId) {
-        throw new Error('Unable to find image ID. Please try uploading again.');
-      }
-
-      console.log('Deleting image with publicId:', publicId);
-      
-      // Use DELETE method with the correct URL structure
-      const response = await fetch(`http://localhost:5000/api/upload/profile-picture/${encodeURIComponent(publicId)}`, {
-        method: 'DELETE',  // Changed from POST to DELETE
+      // No need to send publicId - backend gets it from database
+      const response = await fetch('http://localhost:5000/api/upload/profile-picture', {
+        method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Delete failed');
+        throw new Error('Delete failed');
       }
 
       const data = await response.json();
-      console.log('Delete successful:', data);
-
+      
       // Clear local state
       setPreviewUrl(null);
       localStorage.removeItem('profileImage');
-      localStorage.removeItem('profilePublicId');
+      localStorage.removeItem('profilePublicId'); // Still clean up localStorage
       
       if (onImageUpdate) {
         onImageUpdate(null);
       }
       
     } catch (err) {
-      console.error('Delete error:', err);
       setError(err.message);
     } finally {
       setUploading(false);

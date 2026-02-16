@@ -23,6 +23,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+ 
+    profilePublicId: {
+    type: String,
+    default: null
+  },
+
   lastLogin: {
     type: Date,
     default: null
