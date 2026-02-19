@@ -161,20 +161,21 @@ export function LoginPage({ onLogin }) {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm text-gray-300 mb-2">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Make it strong. Unlike your willpower."
-                  className="w-full bg-[#2a2a38] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#00d9ff] focus:ring-2 focus:ring-[#00d9ff]/20 transition-all"
-                  required
-                />
-              </div>
-
+           <div>
+  <label className="block text-sm text-gray-300 mb-2">
+    Password
+  </label>
+  <input
+    type="password"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    placeholder={isSignup 
+      ? "Make it strong. Unlike your willpower." 
+      : "Your secret key (we won't judge)"}
+    className="w-full bg-[#2a2a38] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#00d9ff] focus:ring-2 focus:ring-[#00d9ff]/20 transition-all"
+    required
+  />
+</div>
               <button
                 type="submit"
                 disabled={loading}

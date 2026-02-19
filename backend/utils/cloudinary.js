@@ -15,10 +15,17 @@ const storage = new CloudinaryStorage({
   params: {
     folder: process.env.CLOUDINARY_UPLOAD_FOLDER || 'academic-victim/profiles',
     allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
-    transformation: [{ width: 500, height: 500, crop: 'limit' }]
+    transformation: [
+      { width: 500, height: 500, crop: 'limit' },
+      { quality: 'auto:best' },
+      { fetch_format: 'auto' }
+    ]
   }
 });
 
-const upload = multer({ storage });
+const upload = multer({
+   storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+   });
 
 module.exports = { cloudinary, upload };

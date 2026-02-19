@@ -21,17 +21,13 @@ router.post('/profile-picture',
       const imageUrl = req.file.path;           // For displaying
       const publicId = req.file.filename;       // For deleting/updating
 
-      console.log('Saving to database:', {
-        profilePicture: imageUrl,
-        profilePublicId: publicId
-      });
 
       // Update user with BOTH fields
       const user = await User.findByIdAndUpdate(
         req.user.userId,
         { 
           profilePicture: imageUrl,
-          profilePublicId: publicId  // NOW THIS WORKS!
+          profilePublicId: publicId  
         },
         { new: true }
       );
@@ -47,8 +43,7 @@ router.post('/profile-picture',
         success: true,
         message: 'Profile picture uploaded successfully',
         imageUrl: imageUrl,
-        publicId: publicId,
-        user: user.toJSON()
+        publicId: publicId
       });
     } catch (error) {
       console.error('Upload error:', error);
@@ -84,7 +79,7 @@ router.delete('/profile-picture',  // No :publicId param needed
       console.log('Deleting image with publicId:', user.profilePublicId);
 
       // 2. Delete from Cloudinary using the stored public_id
-      const result = await cloudinary.uploader.destroy(user.profilePublicId);
+      await cloudinary.uploader.destroy(user.profilePublicId);
 
       // 3. Clear BOTH fields from user document
       const updatedUser = await User.findByIdAndUpdate(
@@ -98,15 +93,15 @@ router.delete('/profile-picture',  // No :publicId param needed
       
       res.json({
         success: true,
-        message: 'Profile picture deleted',
-        result,
-        user: updatedUser.toJSON()
+        message: 'Profile picture removed successfully',
+        user: updatedUser
+       
       });
     } catch (error) {
       console.error('Delete error:', error);
       res.status(500).json({ 
         success: false, 
-        message: 'Delete failed' 
+        message: 'Failed to remove profile picture' 
       });
     }
   }

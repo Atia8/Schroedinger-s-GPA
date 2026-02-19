@@ -23,7 +23,6 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
   const [deadlineReminders, setDeadlineReminders] = useState(true);
   const [dailyRoasts, setDailyRoasts] = useState(false);
   const [despairAlerts, setDespairAlerts] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(false);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [profileImage, setProfileImage] = useState(null);
@@ -64,7 +63,7 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
           setDeadlineReminders(user.notificationPreferences.deadlineReminders ?? true);
           setDailyRoasts(user.notificationPreferences.dailyRoasts ?? false);
           setDespairAlerts(user.notificationPreferences.despairAlerts ?? true);
-          setSoundEnabled(user.notificationPreferences.soundEffects ?? false);
+          
         }
         
         // Update localStorage as backup
@@ -118,7 +117,7 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
         deadlineReminders,
         dailyRoasts,
         despairAlerts,
-        soundEffects: soundEnabled
+      
       };
 
       const response = await fetch('http://localhost:5000/api/users/notifications', {
@@ -154,11 +153,7 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
     setDespairAlerts(!despairAlerts);
     setTimeout(saveNotificationPreferences, 100);
   };
-
-  const handleSoundToggle = () => {
-    setSoundEnabled(!soundEnabled);
-    setTimeout(saveNotificationPreferences, 100);
-  };
+ 
 
   // Handle sarcasm/roast level change
   const handleSarcasmChange = async (level) => {
@@ -603,7 +598,7 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
               <div>
                 <h4 className="font-bold text-lg mb-2">Academic Victim Tracker v1.0</h4>
                 <p className="text-gray-400 italic">
-                  "Helping students quantify their chaos since 2024"
+                  "Helping students quantify their chaos since 2026"
                 </p>
               </div>
             </section>

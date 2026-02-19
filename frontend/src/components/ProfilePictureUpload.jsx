@@ -7,6 +7,7 @@ const ProfilePictureUpload = ({ currentImage = null, onImageUpdate }) => {
   const [previewUrl, setPreviewUrl] = useState(currentImage);
   const fileInputRef = useRef(null);
 
+
   const handleFileSelect = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -35,17 +36,12 @@ const ProfilePictureUpload = ({ currentImage = null, onImageUpdate }) => {
       }
 
       const imageUrl = data.imageUrl;
-      // Clean the publicId - remove any file extension
-      let publicId = data.publicId;
-      if (publicId && publicId.includes('.')) {
-        publicId = publicId.split('.')[0];
-      }
-      
+    
       setPreviewUrl(imageUrl);
       
       // Save to localStorage
       localStorage.setItem('profileImage', imageUrl);
-      localStorage.setItem('profilePublicId', publicId);
+
       
       if (onImageUpdate) {
         onImageUpdate(imageUrl);
@@ -80,7 +76,7 @@ const handleRemoveImage = async () => {
       });
 
       if (!response.ok) {
-        throw new Error('Delete failed');
+        throw new Error('Failed to remove image');
       }
 
       const data = await response.json();
@@ -88,7 +84,6 @@ const handleRemoveImage = async () => {
       // Clear local state
       setPreviewUrl(null);
       localStorage.removeItem('profileImage');
-      localStorage.removeItem('profilePublicId'); // Still clean up localStorage
       
       if (onImageUpdate) {
         onImageUpdate(null);
