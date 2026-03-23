@@ -88,57 +88,189 @@ const calculateDespairIndex = (tasks) => {
   return Math.min(100, finalDespair);
 };
 
-// NPC Commentary based on sarcasm level
-function getNPCCommentary(despair, overdueCount, pendingCount, level) {
+// Dynamic NPC Commentary based on context AND sarcasm level
+function getNPCCommentary(despair, overdueCount, pendingCount, ignoredCount, panicCount, imminentCount, tasks, level) {
+  const now = new Date();
+  
+  // Find the most urgent task
+  const urgentTask = tasks
+    .filter(t => t.status !== 'done')
+    .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))[0];
+  
+  // Calculate days until nearest deadline
+  let daysUntilNearest = null;
+  if (urgentTask && new Date(urgentTask.deadline) > now) {
+    daysUntilNearest = Math.ceil((new Date(urgentTask.deadline) - now) / (1000 * 60 * 60 * 24));
+  }
+  
   const messages = {
     mild: {
-      high: `📊 ${despair}% despair. That's concerning. Maybe take a break? Or start something? Just a suggestion.`,
-      overdue: `You have ${overdueCount} overdue task(s). Time is a concept, but deadlines are not.`,
-      pending: `${pendingCount} task(s) pending. Consider starting soon. Or don't. I'm not your mom.`,
-      default: "Suspiciously quiet... too quiet. Everything okay?"
+      high: () => {
+        if (overdueCount >= 3) return `📊 ${despair}% despair. You have ${overdueCount} overdue tasks. Maybe drop the oldest one? Just a thought.`;
+        if (imminentCount >= 2) return `📊 ${despair}% despair. ${imminentCount} tasks due soon. Time is a concept, but deadlines aren't.`;
+        if (panicCount >= 1) return `📊 ${despair}% despair. You have ${panicCount} task in panic mode. Take a breath.`;
+        return `📊 ${despair}% despair. That's concerning. Take a breath. Or start something. Your call.`;
+      },
+      overdue: () => {
+        if (overdueCount === 1) return `You have 1 overdue task. It's not too late... probably.`;
+        if (overdueCount >= 5) return `${overdueCount} overdue tasks? At this point, just pick one. Any one.`;
+        return `You have ${overdueCount} overdue tasks. The universe isn't judging. Much.`;
+      },
+      ignored: () => {
+        if (ignoredCount === 1) return `You have 1 task you're ignoring. It's still there. Watching.`;
+        if (ignoredCount >= 3) return `${ignoredCount} tasks being ignored. They're not going to disappear.`;
+        return `You're ignoring ${ignoredCount} tasks. Out of sight, out of mind? Not really.`;
+      },
+      panic: () => {
+        if (panicCount === 1) return `You have 1 task in panic mode. Deep breaths. Or panic. Your choice.`;
+        return `${panicCount} tasks in panic mode. At this point, just pick one and start. Any one.`;
+      },
+      pending: () => {
+        if (pendingCount === 0) return `No pending tasks? Either you're ahead or you've given up.`;
+        if (pendingCount >= 5) return `${pendingCount} tasks waiting. Maybe start with the easiest one? No pressure.`;
+        return `${pendingCount} task(s) waiting. They're very patient. Unlike your future self.`;
+      },
+      deadlineSoon: () => {
+        if (daysUntilNearest === 0) return `"${urgentTask?.title}" is due TODAY. Might want to look at that. Just saying.`;
+        if (daysUntilNearest === 1) return `"${urgentTask?.title}" due tomorrow. Sleep is overrated anyway.`;
+        if (daysUntilNearest <= 3) return `${daysUntilNearest} days until "${urgentTask?.title}" is due. Plenty of time. Or not.`;
+        return `Nothing urgent. Suspiciously quiet... too quiet.`;
+      },
+      default: () => "Suspiciously quiet... too quiet. Everything okay?"
     },
     brutal: {
-      high: `📊 ${despair}% despair? Impressive. Almost as impressive as your procrastination skills.`,
-      overdue: `${overdueCount} overdue tasks? At this point, just embrace the chaos.`,
-      pending: `${pendingCount} tasks waiting. They're not going to do themselves. Well, they're not.`,
-      default: "Nothing to do? Either you're ahead or you've given up. I'm betting on the latter."
+      high: () => {
+        if (overdueCount >= 3) return `📊 ${despair}% despair. ${overdueCount} overdue tasks. At this point, just embrace the chaos.`;
+        if (imminentCount >= 2) return `📊 ${despair}% despair. ${imminentCount} tasks due soon. They're not going to do themselves.`;
+        if (panicCount >= 1) return `📊 ${despair}% despair. ${panicCount} task in panic mode. Impressive. Also pathetic.`;
+        return `📊 ${despair}% despair? Impressive. Almost as impressive as your procrastination skills.`;
+      },
+      overdue: () => {
+        if (overdueCount === 1) return `${overdueCount} overdue task. Still procrastinating? Shocking.`;
+        if (overdueCount >= 5) return `${overdueCount} overdue tasks? Have you considered changing your major?`;
+        return `${overdueCount} overdue tasks. Your future self is already disappointed.`;
+      },
+      ignored: () => {
+        if (ignoredCount === 1) return `${ignoredCount} task ignored. Just like your responsibilities.`;
+        if (ignoredCount >= 3) return `${ignoredCount} tasks ignored. They're not going to disappear.`;
+        return `${ignoredCount} tasks being ignored. Pretending they don't exist won't work.`;
+      },
+      panic: () => {
+        if (panicCount === 1) return `${panicCount} task in panic mode. Too late to panic now. Just do it.`;
+        return `${panicCount} tasks in panic mode. Your ancestors didn't survive for this level of panic.`;
+      },
+      pending: () => {
+        if (pendingCount === 0) return "Nothing to do? Either you're ahead or you've given up. I'm betting on the latter.";
+        if (pendingCount >= 5) return `${pendingCount} tasks waiting. They're not going to do themselves. Well, they're not.`;
+        return `${pendingCount} tasks waiting. Your future self hates you already.`;
+      },
+      deadlineSoon: () => {
+        if (daysUntilNearest === 0) return `"${urgentTask?.title}" is due TODAY. You've had time. Lots of it.`;
+        if (daysUntilNearest === 1) return `"${urgentTask?.title}" due tomorrow. Sleep is for people without deadlines.`;
+        if (daysUntilNearest <= 3) return `${daysUntilNearest} days until "${urgentTask?.title}" is due. Tick tock.`;
+        return "Nothing urgent? Don't worry, you'll procrastinate something eventually.";
+      },
+      default: () => "Nothing to do? Either you're ahead or you've given up. I'm betting on the latter."
     },
     damage: {
-      high: `📊 ${despair}% despair? You're a disappointment to your future self.`,
-      overdue: `${overdueCount} overdue tasks? Just drop out already. Save yourself the misery.`,
-      pending: `${pendingCount} tasks pending? Your ancestors didn't survive evolution for this.`,
-      default: "No tasks? Either you're a genius or you've accepted failure. Probably the latter."
+      high: () => {
+        if (overdueCount >= 3) return `📊 ${despair}% despair. ${overdueCount} overdue tasks. Just drop out already.`;
+        if (imminentCount >= 2) return `📊 ${despair}% despair. ${imminentCount} tasks due soon. Your ancestors are ashamed.`;
+        if (panicCount >= 1) return `📊 ${despair}% despair. ${panicCount} task in panic mode. You're a disappointment.`;
+        return `📊 ${despair}% despair? You're a disappointment to your future self.`;
+      },
+      overdue: () => {
+        if (overdueCount === 1) return `${overdueCount} overdue task. You had one job. Literally.`;
+        if (overdueCount >= 5) return `${overdueCount} overdue tasks? Just drop out. Save yourself the misery.`;
+        return `${overdueCount} overdue tasks. Your ancestors didn't survive evolution for this.`;
+      },
+      ignored: () => {
+        if (ignoredCount === 1) return `${ignoredCount} task ignored. Just like your future.`;
+        if (ignoredCount >= 3) return `${ignoredCount} tasks ignored. They're not going anywhere. Neither are you.`;
+        return `${ignoredCount} tasks being ignored. Your ancestors are rolling in their graves.`;
+      },
+      panic: () => {
+        if (panicCount === 1) return `${panicCount} task in panic mode. Too late. Accept your fate.`;
+        return `${panicCount} tasks in panic mode. You're a disappointment to everyone.`;
+      },
+      pending: () => {
+        if (pendingCount === 0) return "No tasks? Either you're a genius or you've accepted failure. Probably the latter.";
+        if (pendingCount >= 5) return `${pendingCount} tasks pending? Just accept your fate.`;
+        return `${pendingCount} tasks waiting. Your ancestors are rolling in their graves.`;
+      },
+      deadlineSoon: () => {
+        if (daysUntilNearest === 0) return `"${urgentTask?.title}" is due TODAY. You're going to fail. Accept it.`;
+        if (daysUntilNearest === 1) return `"${urgentTask?.title}" due tomorrow. You'll do it at 3 AM and hate yourself.`;
+        if (daysUntilNearest <= 3) return `${daysUntilNearest} days until "${urgentTask?.title}" is due. You'll probably still procrastinate.`;
+        return "Nothing urgent? Enjoy it while it lasts. It won't.";
+      },
+      default: () => "No tasks? Either you're a genius or you've accepted failure. Probably the latter."
     }
   };
   
   const mode = messages[level] || messages.brutal;
   
-  if (despair >= 70) return mode.high;
-  if (overdueCount > 0) return mode.overdue;
-  if (pendingCount > 0) return mode.pending;
-  return mode.default;
+  // Priority order for messages
+  if (despair >= 70) return mode.high();
+  if (overdueCount > 0) return mode.overdue();
+  if (panicCount > 0) return mode.panic();  // NEW: Panic status
+  if (ignoredCount > 0) return mode.ignored();  // NEW: Ignored status
+  if (daysUntilNearest !== null && daysUntilNearest <= 3) return mode.deadlineSoon();
+  if (pendingCount > 0) return mode.pending();
+  return mode.default();
 }
 
-// Rituals based on sarcasm level
-function getRituals(level) {
+// Dynamic rituals based on context
+function getRituals(level, overdueCount, pendingCount, despair) {
+  // Context-specific rituals
+  if (overdueCount >= 3) {
+    return [
+      "Delete the oldest overdue task. You're not doing it anyway.",
+      "Accept that these 3 tasks are dead. Focus on the rest.",
+      "Email your professor. Apologize. Move on.",
+      "Drop one class. Your mental health > your GPA."
+    ];
+  }
+  
+  if (pendingCount >= 5) {
+    return [
+      "Pick ONE task. Just one. Do it. Then rest.",
+      "Delete the lowest priority task. Feel the freedom.",
+      "Break down your largest task into 3 smaller ones.",
+      "Use the Pomodoro technique. 25 minutes. That's it."
+    ];
+  }
+  
+  if (despair >= 70) {
+    return [
+      "Drop one task. Seriously. Your mental health matters.",
+      "Take 10 minutes. No screens. Just breathe.",
+      "Write down what's stressing you. Burn the paper. Metaphorically.",
+      "Text a friend. Tell them you're overwhelmed. Let them help."
+    ];
+  }
+  
   const rituals = {
     mild: [
       "Scream into a pillow (Volume 4/10).",
       "Stare at the ceiling for 2 minutes.",
       "Drink water. Dehydration won't help.",
-      "Close 10 browser tabs. Just 10."
+      "Close 10 browser tabs. Just 10.",
+      "Pet an animal. If no animal, imagine one."
     ],
     brutal: [
       "Scream into a pillow (Volume 8/10).",
       "Stare at the ceiling and question your choices.",
       "Google 'jobs that don't require deadlines'.",
-      "Delete one task. Any task. Feel the relief."
+      "Delete one task. Any task. Feel the relief.",
+      "Accept that you will fail one thing. Choose which one."
     ],
     damage: [
       "Scream into a pillow until you pass out.",
       "Accept that you'll fail one thing. Choose which one.",
       "Google 'how to drop out gracefully'.",
-      "Delete your most overdue task. It's dead anyway."
+      "Delete your most overdue task. It's dead anyway.",
+      "Lie on the floor. Stay there. Think about your choices."
     ]
   };
   
@@ -149,33 +281,42 @@ exports.getDashboardData = async (req, res) => {
   try {
     const userId = req.user.userId;
     
-    // Get user with sarcasm level
     const user = await User.findById(userId);
     const sarcasmLevel = user?.sarcasmLevel || 'brutal';
-    
-    // Get ALL tasks
     const tasks = await Task.find({ user: userId });
 
     const now = new Date();
-    
-    // Use the SAME calculation as notification service
     const finalDespair = calculateDespairIndex(tasks);
     
-    // Count tasks by status
+    // Count ALL status types
     const overdueCount = tasks.filter(t => t.status === 'overdue').length;
     const pendingCount = tasks.filter(t => t.status === 'pending').length;
+    const ignoredCount = tasks.filter(t => t.status === 'ignored').length;  // NEW
+    const panicCount = tasks.filter(t => t.status === 'panic').length;      // NEW
     const inProgressCount = tasks.filter(t => t.status === 'in-progress').length;
-    const panicCount = tasks.filter(t => t.status === 'panic').length;
     const doneCount = tasks.filter(t => t.status === 'done').length;
     
-    // --- Dynamic NPC Commentary based on sarcasm level ---
-    let npcMessage = getNPCCommentary(finalDespair, overdueCount, pendingCount, sarcasmLevel);
+    const imminentCount = tasks.filter(t => {
+      const deadline = new Date(t.deadline);
+      const hoursUntil = (deadline - now) / (1000 * 60 * 60);
+      return hoursUntil <= 24 && hoursUntil > 0;
+    }).length;
     
-    // --- Ritual Generator based on sarcasm level ---
-    const rituals = getRituals(sarcasmLevel);
+    // Pass ALL counts to getNPCCommentary
+    const npcMessage = getNPCCommentary(
+      finalDespair, 
+      overdueCount, 
+      pendingCount, 
+      ignoredCount,   // NEW
+      panicCount,     // NEW
+      imminentCount, 
+      tasks, 
+      sarcasmLevel
+    );
+    
+    const rituals = getRituals(sarcasmLevel, overdueCount, pendingCount, finalDespair);
     const randomRitual = rituals[Math.floor(Math.random() * rituals.length)];
-
-    // --- Urgent Tasks (due in 24h or overdue) ---
+    
     const urgentTasks = tasks
       .filter(t => {
         const deadline = new Date(t.deadline);
@@ -195,13 +336,14 @@ exports.getDashboardData = async (req, res) => {
       despairIndex: finalDespair,
       npcMessage,
       ritual: randomRitual,
-      sarcasmLevel, // Send to frontend
+      sarcasmLevel,
       stats: {
         total: tasks.length,
         overdue: overdueCount,
         pending: pendingCount,
+        ignored: ignoredCount,      // NEW
+        panic: panicCount,          // NEW
         inProgress: inProgressCount,
-        panic: panicCount,
         done: doneCount
       },
       urgentTasks
@@ -211,4 +353,5 @@ exports.getDashboardData = async (req, res) => {
     console.error("[Dashboard Logic Error]", error);
     res.status(500).json({ message: "The server is also having a breakdown." });
   }
+
 };

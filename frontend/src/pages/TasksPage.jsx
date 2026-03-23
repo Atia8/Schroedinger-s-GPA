@@ -15,11 +15,9 @@ export default function TasksPage() {
   const [newDeadline, setNewDeadline] = useState('');
   const [sarcasmLevel, setSarcasmLevel] = useState('brutal');
 
-  // Fetch user's sarcasm level and tasks
   const fetchData = async () => {
     const token = localStorage.getItem('token');
     
-    // Get user's sarcasm level
     try {
       const userRes = await fetch('http://localhost:5000/api/users/profile', {
         headers: { Authorization: `Bearer ${token}` }
@@ -30,7 +28,6 @@ export default function TasksPage() {
       console.error('Failed to fetch user:', err);
     }
     
-    // Get tasks
     fetch('http://localhost:5000/api/tasks', {
       headers: {
         'Content-Type': 'application/json',
@@ -45,7 +42,6 @@ export default function TasksPage() {
   useEffect(() => {
     fetchData();
     
-    // Listen for sarcasm changes from settings
     const handleSarcasmChange = () => fetchData();
     window.addEventListener('sarcasmChanged', handleSarcasmChange);
     window.addEventListener('refreshDashboard', handleSarcasmChange);
@@ -56,52 +52,121 @@ export default function TasksPage() {
     };
   }, []);
 
-  // Generate roast based on task and sarcasm level
-  const getTaskRoast = (task) => {
-    const now = new Date();
-    const deadline = new Date(task.deadline);
-    const hoursUntil = (deadline - now) / (1000 * 60 * 60);
-    
-    const roasts = {
-      mild: {
-        overdue: `"${task.title}" is overdue. Time is a concept, but deadlines aren't.`,
-        dueSoon: `"${task.title}" is due in ${Math.ceil(hoursUntil)} hours. Consider starting.`,
-        pending: `"${task.title}" is waiting. It's very patient. Unlike your future self.`
-      },
-      brutal: {
-        overdue: `"${task.title}" is overdue. Still procrastinating? Shocking.`,
-        dueSoon: `"${task.title}" is due in ${Math.ceil(hoursUntil)} hours. They're not going to do themselves.`,
-        pending: `"${task.title}" is waiting. Your future self is already disappointed.`
-      },
-      damage: {
-        overdue: `"${task.title}" is overdue. At this point, just drop it.`,
-        dueSoon: `"${task.title}" is due in ${Math.ceil(hoursUntil)} hours. Your ancestors didn't survive for this.`,
-        pending: `"${task.title}" is waiting. Just accept your fate.`
-      }
-    };
-    
-    const mode = roasts[sarcasmLevel] || roasts.brutal;
-    
-    if (task.status === 'overdue') return mode.overdue;
-    if (hoursUntil <= 24 && hoursUntil > 0) return mode.dueSoon;
-    return mode.pending;
+// Dynamic roast based on task status and sarcasm level (WITH VARIATIONS)
+const getTaskRoast = (task) => {
+  const now = new Date();
+  const deadline = new Date(task.deadline);
+  const hoursUntilDeadline = (deadline - now) / (1000 * 60 * 60);
+  const daysUntil = Math.ceil(hoursUntilDeadline / 24);
+  const daysOverdue = Math.ceil((now - deadline) / (1000 * 60 * 60 * 24));
+  
+  // Multiple roast variations for each status
+  const roastVariations = {
+    mild: {
+      overdue: [
+        `"${task.title}" is ${daysOverdue} day(s) overdue. Time is a concept, but deadlines aren't.`,
+        `"${task.title}" has been sitting there for ${daysOverdue} days. It's not going to do itself.`,
+        `"${task.title}" is ${daysOverdue} day(s) overdue. Consider starting. Or don't. Your call.`
+      ],
+      ignored: [
+        `"${task.title}" is being ignored. It sits there. Judging you. Silently.`,
+        `"${task.title}" is pretending not to exist. You're good at that.`,
+        `"${task.title}" is waiting. And waiting. And waiting...`
+      ],
+      panic: [
+        `"${task.title}" has pushed you into panic mode. Take a breath. Or don't.`,
+        `"${task.title}" is causing chaos. Deep breaths. Or scream. Both work.`,
+        `"${task.title}" = panic. Maybe just start. ANYTHING helps.`
+      ],
+      pending: [
+        `"${task.title}" is waiting. It's very patient. Unlike your future self.`,
+        `"${task.title}" is on the list. Still. Has been for a while.`,
+        `"${task.title}" exists. That's... something.`
+      ],
+      'in-progress': [
+        `"${task.title}" is in progress. Good. Keep going. Maybe.`,
+        `"${task.title}" is being worked on. Don't stop now.`,
+        `"${task.title}" - half done? Quarter done? At least it's started.`
+      ],
+      done: [
+        `"${task.title}" is done. Miracles do happen.`,
+        `"${task.title}" is complete. Don't let it go to your head.`,
+        `"${task.title}" is finished. One down, ${task.length} to go.`
+      ]
+    },
+    brutal: {
+      overdue: [
+        `"${task.title}" is ${daysOverdue} day(s) overdue. Still procrastinating? Shocking.`,
+        `"${task.title}" is ${daysOverdue} days late. Your future self is disappointed.`,
+        `"${daysOverdue} days. That's how long "${task.title}" has been ignored. Pathetic.`
+      ],
+      ignored: [
+        `"${task.title}" is ignored. Just like your responsibilities.`,
+        `"${task.title}" is being avoided. Shocking. Absolutely shocking.`,
+        `"${task.title}" is collecting dust. Just like your ambition.`
+      ],
+      panic: [
+        `"${task.title}" has sent you into panic mode. Impressive. Also pathetic.`,
+        `"${task.title}" is making you panic. Good. Maybe now you'll do something.`,
+        `Panic over "${task.title}"? Too late to panic now. Just do it.`
+      ],
+      pending: [
+        `"${task.title}" is waiting. Your future self hates you already.`,
+        `"${task.title}" hasn't been touched. Typical.`,
+        `"${task.title}" is still there. Are you surprised? I'm not.`
+      ],
+      'in-progress': [
+        `"${task.title}" is in progress. Don't stop now. You might actually finish.`,
+        `"${task.title}" is being worked on. Finally.`,
+        `"${task.title}" - started. Will it finish? History says no.`
+      ],
+      done: [
+        `"${task.title}" is done. Took you long enough.`,
+        `"${task.title}" is complete. Don't expect a parade.`,
+        `Finally. "${task.title}" is done. Only ${task.length - 1} left.`
+      ]
+    },
+    damage: {
+      overdue: [
+        `"${task.title}" is ${daysOverdue} day(s) overdue. Your ancestors are ashamed.`,
+        `"${daysOverdue} days overdue for "${task.title}". Just drop it. It's dead.`,
+        `"${task.title}" is ${daysOverdue} days late. You had one job.`
+      ],
+      ignored: [
+        `"${task.title}" is ignored. Just like your future.`,
+        `"${task.title}" is being avoided. Your ancestors are rolling in their graves.`,
+        `Ignoring "${task.title}" won't make it disappear. Neither will your problems.`
+      ],
+      panic: [
+        `"${task.title}" pushed you into panic. You're a disappointment to everyone.`,
+        `Panic over "${task.title}"? Your ancestors didn't survive for this.`,
+        `"${task.title}" = panic. Just accept your fate.`
+      ],
+      pending: [
+        `"${task.title}" is waiting. Your ancestors are rolling in their graves.`,
+        `"${task.title}" is still there. Pathetic.`,
+        `"${task.title}" hasn't been touched. Predictable.`
+      ],
+      'in-progress': [
+        `"${task.title}" is in progress. Don't mess this up. You will.`,
+        `"${task.title}" is being worked on. For now.`,
+        `Started "${task.title}". Will you finish? Doubtful.`
+      ],
+      done: [
+        `"${task.title}" is done. Fluke. Pure fluke.`,
+        `"${task.title}" is complete. Don't get used to it.`,
+        `Miraculously, "${task.title}" is done. One miracle won't save you.`
+      ]
+    }
   };
+  
+  const variations = roastVariations[sarcasmLevel] || roastVariations.brutal;
+  const roastList = variations[task.status] || variations.pending;
+  
+  // Randomly pick one variation
+  return roastList[Math.floor(Math.random() * roastList.length)];
+};
 
-  // Get NPC emoji based on sarcasm level
-  const getNpcEmoji = () => {
-    if (sarcasmLevel === 'damage') return '💀';
-    if (sarcasmLevel === 'brutal') return '😈';
-    return '😐';
-  };
-
-  // Get NPC name based on sarcasm level
-  const getNpcName = () => {
-    if (sarcasmLevel === 'damage') return 'The Destroyer';
-    if (sarcasmLevel === 'brutal') return 'Honest Friend';
-    return 'Passive Mentor';
-  };
-
-  // --- DELETE TASK FUNCTION ---
   const handleDeleteTask = async (taskId) => {
     const token = localStorage.getItem('token');
     try {
@@ -139,9 +204,11 @@ export default function TasksPage() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      ignored: <Badge className="bg-[#8a8a9f]/20 text-[#8a8a9f] border-[#8a8a9f]/30">Ignored</Badge>,
+      ignored: <Badge className="bg-gray-600/20 text-gray-400 border-gray-600/30">Ignored</Badge>,
+      pending: <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-600/30">Pending</Badge>,
+      'in-progress': <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30">In Progress</Badge>,
       panic: <Badge className="bg-[#ff3366]/20 text-[#ff3366] border-[#ff3366]/30">Panic Imminent</Badge>,
-      done: <Badge className="bg-[#39ff14]/20 text-[#39ff14] border-[#39ff14]/30">Miraculously Done</Badge>,
+      done: <Badge className="bg-[#39ff14]/20 text-[#39ff14] border-[#39ff14]/30">Done</Badge>,
       overdue: <Badge className="bg-[#ff6b35]/20 text-[#ff6b35] border-[#ff6b35]/30">Overdue</Badge>,
     };
     return badges[status] || null;
@@ -151,8 +218,8 @@ export default function TasksPage() {
     { value: 'all', label: 'All Tasks' },
     { value: 'overdue', label: 'Overdue' },
     { value: 'ignored', label: 'Ignored' },
-    { value: 'done', label: 'Completed' },
     { value: 'panic', label: 'Panic Mode' },
+    { value: 'done', label: 'Completed' },
   ];
 
   const filteredTasks = filter === 'all' ? tasks : tasks.filter(t => t.status === filter);
@@ -160,7 +227,6 @@ export default function TasksPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-7xl mx-auto px-6 py-12">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2 text-white">Avoidance Headquarters</h1>
           <p className="text-[#8a8a9f] italic">Your command center for professional procrastination.</p>
@@ -170,7 +236,6 @@ export default function TasksPage() {
         </div>
 
         <div className="flex gap-6">
-          {/* Left Sidebar - Filters */}
           <div className="w-64 flex-shrink-0">
             <div className="bg-[#151520] border border-white/10 rounded-2xl p-6 sticky top-24">
               <h3 className="font-bold mb-4 text-white">Filters</h3>
@@ -192,7 +257,6 @@ export default function TasksPage() {
             </div>
           </div>
           
-          {/* Main Content */}
           <div className="flex-1">
             <div className="space-y-4">
               {filteredTasks.map((task) => (
@@ -215,44 +279,28 @@ export default function TasksPage() {
                         </div>
                       </div>
                     </div>
-                    {getStatusBadge(task.status)}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteTask(task._id);
-                      }}
-                      className="ml-2 text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 size={20} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(task.status)}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTask(task._id);
+                        }}
+                        className="text-red-500 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </div>
                   
-                  {/* Roast Panel - Dynamic based on sarcasm level */}
-                  <div className="bg-gradient-to-br from-[#ff6b35]/10 via-[#1a1a28] to-[#ff3366]/10 border border-[#ff6b35]/30 rounded-xl p-5 backdrop-blur-sm">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-2 h-2 rounded-full bg-[#ff6b35] animate-pulse" />
-                      <span className="text-sm font-bold text-[#ff6b35]">ROAST PANEL</span>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#2a2a3f] flex items-center justify-center text-lg flex-shrink-0">
-                          {getNpcEmoji()}
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-xs text-[#ff6b35] font-medium mb-1">
-                            {getNpcName()}:
-                          </div>
-                          <p className="text-sm italic text-[#e8e8f0]">"{getTaskRoast(task)}"</p>
-                        </div>
-                      </div>
-                    </div>
+                  {/* Simple Roast Comment - No NPC, no label */}
+                  <div className="bg-gradient-to-br from-[#ff6b35]/10 via-[#1a1a28] to-[#ff3366]/10 border border-[#ff6b35]/30 rounded-xl p-4 backdrop-blur-sm">
+                    <p className="text-sm italic text-[#e8e8f0]">"{getTaskRoast(task)}"</p>
                   </div>
                 </div>
               ))}
             </div>
             
-            {/* Floating Add Button */}
             <button
               onClick={() => setIsAddingTask(true)}
               className="fixed bottom-8 right-8 bg-gradient-to-r from-[#00d4ff] to-[#9d4edd] text-white px-6 py-4 rounded-full shadow-2xl hover:shadow-[#00d4ff]/50 transition-all flex items-center gap-3 font-bold"
@@ -264,7 +312,6 @@ export default function TasksPage() {
         </div>
       </div>
       
-      {/* Task Details Drawer */}
       <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
         <DialogContent className="bg-[#151520] border-white/10 text-white max-w-2xl">
           {selectedTask && (
@@ -290,20 +337,20 @@ export default function TasksPage() {
                 </div>
                 
                 <div>
-                  <div className="text-sm text-[#8a8a9f] mb-3">NPC Commentary</div>
+                  <div className="text-sm text-[#8a8a9f] mb-3">Commentary</div>
                   <div className="bg-[#1a1a28] border border-white/5 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="text-2xl">{getNpcEmoji()}</div>
-                      <div>
-                        <div className="text-[#ff6b35] font-medium mb-1">{getNpcName()}</div>
-                        <p className="italic text-white">"{getTaskRoast(selectedTask)}"</p>
-                      </div>
-                    </div>
+                    <p className="italic text-white">"{getTaskRoast(selectedTask)}"</p>
                   </div>
                 </div>
                 
-                <Button className="w-full bg-[#00d4ff] text-black hover:bg-[#00d4ff]/90">
-                  Edit Task
+                <Button 
+                  onClick={() => {
+                    handleDeleteTask(selectedTask._id);
+                    setSelectedTask(null);
+                  }}
+                  className="w-full bg-red-600 hover:bg-red-700"
+                >
+                  Delete Task
                 </Button>
               </div>
             </>
@@ -311,7 +358,6 @@ export default function TasksPage() {
         </DialogContent>
       </Dialog>
       
-      {/* Add Task Modal */}
       <Dialog open={isAddingTask} onOpenChange={setIsAddingTask}>
         <DialogContent className="bg-[#151520] border-white/10 text-white">
           <DialogHeader>
