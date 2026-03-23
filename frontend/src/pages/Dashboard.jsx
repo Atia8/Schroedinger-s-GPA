@@ -1,13 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import PanicMeter from '../components/PanicMeter';
-import { AlertTriangle, Zap, Coffee, Wind, Skull, Smile } from 'lucide-react';
+import { AlertTriangle, Zap, Coffee, Wind, Skull, Smile, Bell } from 'lucide-react';
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  // ✅ Simple State for button animations only
-  const [activeEffect, setActiveEffect] = useState(null); 
+  const [activeEffect, setActiveEffect] = useState(null);
+
+  // Function to trigger despair check on the backend
+  const triggerDespairCheck = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/notifications/check-despair', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const result = await response.json();
+      console.log('Despair check result:', result);
+    } catch (error) {
+      console.error('Failed to trigger despair check:', error);
+    }
+  };
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -16,7 +31,16 @@ export default function Dashboard() {
         const res = await fetch('http://localhost:5000/api/dashboard', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (res.ok) setData(await res.json());
+        if (res.ok) {
+          const dashboardData = await res.json();
+          setData(dashboardData);
+          
+          // After loading dashboard, check if despair is high and trigger alert
+          if (dashboardData.despairIndex >= 70) {
+            console.log(`⚠️ Despair index is ${dashboardData.despairIndex}%, checking for alert...`);
+            await triggerDespairCheck();
+          }
+        }
       } catch (err) {
         console.error("Failed to load chaos:", err);
       } finally {
@@ -26,7 +50,13 @@ export default function Dashboard() {
     fetchDashboard();
   }, []);
 
-  // ✅ Simple Trigger: Just sets the effect for 2 seconds
+  // Manual test button function
+  const testDespairAlert = async () => {
+    console.log('🔔 Manually testing despair alert...');
+    await triggerDespairCheck();
+    alert('Despair check triggered! Check your bell icon for notification.');
+  };
+
   const triggerEffect = (effect) => {
     setActiveEffect(effect);
     setTimeout(() => setActiveEffect(null), 2000);
@@ -52,6 +82,16 @@ export default function Dashboard() {
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent">Chaos Dashboard</h1>
           <p className="text-gray-400">Welcome to your daily breakdown.</p>
         </div>
+        
+        {/* Add Test Button for Despair Alerts (remove in production) */}
+        <button
+          onClick={testDespairAlert}
+          className="text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded-lg transition-colors flex items-center gap-1"
+          title="Test Despair Alert"
+        >
+          <Bell size={12} />
+          Test Alert
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -71,8 +111,6 @@ export default function Dashboard() {
           </h3>
           <p className="text-xl italic text-gray-200 z-10">"{data.npcMessage}"</p>
         </div>
-
-        {/* --- MIDDLE ROW --- */}
 
         {/* 3. Impending Doom List */}
         <div className="bg-[#2C2C2E] p-6 rounded-xl border border-gray-700 flex flex-col">
@@ -116,14 +154,12 @@ export default function Dashboard() {
            </div>
         </div>
 
-        {/* 5. ✅ SIMPLIFIED Quick Coping */}
+        {/* 5. Quick Coping */}
         <div className="bg-[#2C2C2E] p-6 rounded-xl border border-gray-700 flex flex-col">
            <h3 className="text-gray-400 uppercase text-xs tracking-widest mb-4 flex items-center gap-2">
              <Zap size={16} className="text-blue-500"/> Quick Coping
            </h3>
            <div className="grid grid-cols-2 gap-3 flex-1">
-              
-              {/* Breathe Button */}
               <button 
                 onClick={() => triggerEffect('breathe')}
                 className={`p-2 rounded-lg transition-all flex flex-col items-center justify-center gap-1 text-xs font-medium 
@@ -134,7 +170,6 @@ export default function Dashboard() {
                 <span>{activeEffect === 'breathe' ? 'Exhale...' : 'Breathe'}</span>
               </button>
 
-              {/* Caffeinate Button */}
               <button 
                 onClick={() => triggerEffect('coffee')}
                 className={`p-2 rounded-lg transition-all flex flex-col items-center justify-center gap-1 text-xs font-medium 
@@ -145,7 +180,6 @@ export default function Dashboard() {
                 <span>{activeEffect === 'coffee' ? 'JITTERS' : 'Caffeinate'}</span>
               </button>
 
-              {/* Dissociate Button */}
               <button 
                 onClick={() => triggerEffect('blur')}
                 className={`p-2 rounded-lg transition-all duration-1000 flex flex-col items-center justify-center gap-1 text-xs font-medium 
@@ -156,7 +190,6 @@ export default function Dashboard() {
                 <span>{activeEffect === 'blur' ? '.....' : 'Dissociate'}</span>
               </button>
 
-              {/* Scream Button */}
               <button 
                 onClick={() => triggerEffect('scream')}
                 className={`p-2 rounded-lg transition-all flex flex-col items-center justify-center gap-1 text-xs font-medium 
@@ -166,7 +199,6 @@ export default function Dashboard() {
                 <Skull size={18} className={activeEffect === 'scream' ? 'animate-spin' : ''} />
                 <span>{activeEffect === 'scream' ? 'AHHHHH!' : 'Scream'}</span>
               </button>
-
            </div>
         </div>
 

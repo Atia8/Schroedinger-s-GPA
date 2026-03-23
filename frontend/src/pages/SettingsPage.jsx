@@ -29,11 +29,11 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
   const [despairIndex, setDespairIndex] = useState(0);
   const [currentSarcasmLevel, setCurrentSarcasmLevel] = useState(sarcasmLevel);
 
-  // Fetch user data from backend on mount
+  // Fetch user data from backend on mount - ALWAYS fetch fresh!
   useEffect(() => {
     fetchUserData();
     fetchDashboardData();
-  }, []);
+  }, []); // Empty dependency array means runs on every mount
 
   const fetchUserData = async () => {
     try {
@@ -43,6 +43,7 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
         return;
       }
 
+      console.log('Fetching user data...');
       const response = await fetch('http://localhost:5000/api/users/profile', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -53,17 +54,24 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
         const data = await response.json();
         const user = data.user;
         
+        console.log('User data received:', user);
+        
         setUsername(user.username || 'Suffering Student');
         setEmail(user.email || '');
         setProfileImage(user.profilePicture || null);
         setCurrentSarcasmLevel(user.sarcasmLevel || 'brutal');
         
-        // Load notification preferences
+        // Load notification preferences - IMPORTANT: Use actual values from server
         if (user.notificationPreferences) {
+          console.log('Notification preferences from server:', user.notificationPreferences);
           setDeadlineReminders(user.notificationPreferences.deadlineReminders ?? true);
           setDailyRoasts(user.notificationPreferences.dailyRoasts ?? false);
           setDespairAlerts(user.notificationPreferences.despairAlerts ?? true);
-          
+        } else {
+          // Default values if no preferences exist
+          setDeadlineReminders(true);
+          setDailyRoasts(false);
+          setDespairAlerts(true);
         }
         
         // Update localStorage as backup
@@ -84,6 +92,8 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
       setUsername(localStorage.getItem('username') || 'Suffering Student');
       setProfileImage(localStorage.getItem('profileImage') || null);
       setCurrentSarcasmLevel(localStorage.getItem('sarcasmLevel') || sarcasmLevel);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -102,8 +112,6 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -117,8 +125,9 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
         deadlineReminders,
         dailyRoasts,
         despairAlerts,
-      
       };
+
+      console.log('Saving preferences:', preferences);
 
       const response = await fetch('http://localhost:5000/api/users/notifications', {
         method: 'PATCH',
@@ -129,36 +138,130 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
         body: JSON.stringify(preferences)
       });
 
+      const data = await response.json();
+      console.log('Save response:', data);
+
       if (response.ok) {
         setSuccess('Notification preferences updated!');
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(data.message || 'Failed to save preferences');
+        setTimeout(() => setError(''), 3000);
       }
     } catch (error) {
       console.error('Error saving preferences:', error);
       setError('Failed to save preferences');
+      setTimeout(() => setError(''), 3000);
     }
   };
 
-  // Handle toggle changes
-  const handleDeadlineToggle = () => {
-    setDeadlineReminders(!deadlineReminders);
-    setTimeout(saveNotificationPreferences, 100);
+  // Handle toggle changes - SAVE IMMEDIATELY
+  const handleDeadlineToggle = async () => {
+    const newValue = !deadlineReminders;
+    setDeadlineReminders(newValue);
+    
+    // Save immediately
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5000/api/users/notifications', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          deadlineReminders: newValue,
+          dailyRoasts,
+          despairAlerts
+        })
+      });
+
+      if (response.ok) {
+        setSuccess(`Deadline reminders ${newValue ? 'enabled' : 'disabled'}`);
+        setTimeout(() => setSuccess(''), 2000);
+      }
+    } catch (error) {
+      console.error('Error saving preference:', error);
+      // Revert on error
+      setDeadlineReminders(!newValue);
+      setError('Failed to save preference');
+      setTimeout(() => setError(''), 2000);
+    }
   };
 
-  const handleDailyRoastsToggle = () => {
-    setDailyRoasts(!dailyRoasts);
-    setTimeout(saveNotificationPreferences, 100);
+  const handleDailyRoastsToggle = async () => {
+    const newValue = !dailyRoasts;
+    setDailyRoasts(newValue);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5000/api/users/notifications', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          deadlineReminders,
+          dailyRoasts: newValue,
+          despairAlerts
+        })
+      });
+
+      if (response.ok) {
+        setSuccess(`Daily roasts ${newValue ? 'enabled' : 'disabled'}`);
+        setTimeout(() => setSuccess(''), 2000);
+      }
+    } catch (error) {
+      console.error('Error saving preference:', error);
+      setDailyRoasts(!newValue);
+      setError('Failed to save preference');
+      setTimeout(() => setError(''), 2000);
+    }
   };
 
-  const handleDespairToggle = () => {
-    setDespairAlerts(!despairAlerts);
-    setTimeout(saveNotificationPreferences, 100);
+  const handleDespairToggle = async () => {
+    const newValue = !despairAlerts;
+    setDespairAlerts(newValue);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5000/api/users/notifications', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          deadlineReminders,
+          dailyRoasts,
+          despairAlerts: newValue
+        })
+      });
+
+      if (response.ok) {
+        setSuccess(`Despair alerts ${newValue ? 'enabled' : 'disabled'}`);
+        setTimeout(() => setSuccess(''), 2000);
+      }
+    } catch (error) {
+      console.error('Error saving preference:', error);
+      setDespairAlerts(!newValue);
+      setError('Failed to save preference');
+      setTimeout(() => setError(''), 2000);
+    }
   };
- 
 
   // Handle sarcasm/roast level change
   const handleSarcasmChange = async (level) => {
     setCurrentSarcasmLevel(level);
-    onSarcasmChange(level); // Call the prop function
+    onSarcasmChange(level);
     
     try {
       const token = localStorage.getItem('token');
@@ -173,13 +276,13 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
 
       if (response.ok) {
         setSuccess(`Roast mode set to ${level}!`);
+        setTimeout(() => setSuccess(''), 2000);
         localStorage.setItem('sarcasmLevel', level);
-        
-        // Trigger dashboard refresh to show new NPC messages
         window.dispatchEvent(new Event('refreshDashboard'));
       }
     } catch (error) {
       setError('Failed to update roast mode');
+      setTimeout(() => setError(''), 2000);
     }
   };
 
@@ -225,18 +328,12 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
       }
 
       localStorage.setItem('username', username.trim());
-      
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        user.username = username.trim();
-        localStorage.setItem('user', JSON.stringify(user));
-      }
-
       setSuccess('Username updated successfully!');
+      setTimeout(() => setSuccess(''), 2000);
       await fetchUserData();
     } catch (err) {
       setError(err.message);
+      setTimeout(() => setError(''), 2000);
     } finally {
       setUpdating(false);
     }
@@ -245,11 +342,13 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
   // Modal success handlers
   const handleEmailChangeSuccess = (message) => {
     setSuccess(message);
+    setTimeout(() => setSuccess(''), 3000);
     fetchUserData();
   };
 
   const handlePasswordChangeSuccess = (message) => {
     setSuccess(message);
+    setTimeout(() => setSuccess(''), 3000);
   };
 
   const handleDeleteSuccess = () => {
@@ -264,6 +363,7 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
   const handleRefreshPreview = () => {
     window.dispatchEvent(new Event('refreshDashboard'));
     setSuccess('Preview refreshed! Settings applied.');
+    setTimeout(() => setSuccess(''), 2000);
   };
 
   const sarcasmOptions = [
@@ -306,7 +406,6 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-black text-gray-100 font-sans">
       <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
         <header className="mb-10">
           <div className="mb-8">
             <p className="text-gray-400">
@@ -316,7 +415,6 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
           <div className="h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent"></div>
         </header>
 
-        {/* Success/Error Messages */}
         {error && (
           <div className="mb-6 p-4 bg-rose-900/30 border border-rose-700 rounded-lg text-rose-200">
             {error}
@@ -340,7 +438,6 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
               </h3>
               
               <div className="flex flex-col lg:flex-row gap-8">
-                {/* Profile Picture */}
                 <div className="lg:w-1/3">
                   <div className="mb-4">
                     <label className="block text-sm text-gray-300 mb-2">
@@ -356,7 +453,6 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
                   </div>
                 </div>
                 
-                {/* Profile Info */}
                 <div className="lg:w-2/3 space-y-6">
                   <div>
                     <label className="block text-sm text-gray-300 mb-2">
@@ -440,7 +536,6 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
                 ))}
               </div>
 
-              {/* Live Preview */}
               <div className="bg-gradient-to-br from-purple-900/30 to-gray-900/50 border border-purple-700/30 rounded-xl p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse"></div>
@@ -594,7 +689,6 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
             {/* About */}
             <section className="bg-gradient-to-br from-purple-900/20 to-gray-900/30 border border-purple-700/30 rounded-2xl p-6">
               <h3 className="text-xl font-bold mb-4">About</h3>
-              
               <div>
                 <h4 className="font-bold text-lg mb-2">Academic Victim Tracker v1.0</h4>
                 <p className="text-gray-400 italic">
