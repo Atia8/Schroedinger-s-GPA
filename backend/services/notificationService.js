@@ -217,7 +217,7 @@ class NotificationService {
     });
   }
   
-// Check despair and create alert
+// Check despair and create alert with drop suggestion
 async checkAndCreateDespairAlert(userId) {
   console.log(`📊 [DESPAIR] Checking despair for user ${userId}`);
   
@@ -237,13 +237,65 @@ async checkAndCreateDespairAlert(userId) {
     
     if (!recentAlert) {
       const user = await User.findById(userId);
-      const messages = {
-        mild: `Your despair index is at ${despairIndex}%. That's concerning. Take a break!`,
-        brutal: `${despairIndex}% despair? Impressive numbers. Too bad it's not helping your grades.`,
-        damage: `${despairIndex}% despair? You're a disappointment to everyone, including yourself.`
-      };
       
-      const message = messages[user?.sarcasmLevel || 'brutal'] || messages.brutal;
+      // Find the oldest overdue task
+      const overdueTasks = tasks.filter(t => t.status === 'overdue');
+      const oldestOverdue = overdueTasks.sort((a, b) => 
+        new Date(a.deadline) - new Date(b.deadline)
+      )[0];
+      
+      // Count tasks due in next 24h
+      const now = new Date();
+      const imminentTasks = tasks.filter(t => {
+        const deadline = new Date(t.deadline);
+        const hoursUntil = (deadline - now) / (1000 * 60 * 60);
+        return hoursUntil <= 24 && hoursUntil > 0 && t.status !== 'done';
+      });
+      
+      // Build drop suggestion
+      let dropSuggestion = "";
+      if (oldestOverdue) {
+        const daysOverdue = Math.ceil((now - new Date(oldestOverdue.deadline)) / (1000 * 60 * 60 * 24));
+        dropSuggestion = `\n\n🗑️ DROP: "${oldestOverdue.title}"\n   Due: ${new Date(oldestOverdue.deadline).toLocaleDateString()} (${daysOverdue} days overdue)\n   You're never doing it. Drop it. Focus on the rest.`;
+      } else if (imminentTasks.length > 2) {
+        dropSuggestion = `\n\n🗑️ DROP SUGGESTION:\n   You have ${imminentTasks.length} tasks due in 24h.\n   You can't do all. Pick the least important and drop it.\n   Survival > perfection.`;
+      } else if (tasks.length > 5 && tasks.filter(t => t.status === 'pending').length > 3) {
+        dropSuggestion = `\n\n🗑️ DROP SUGGESTION:\n   You have ${tasks.length} tasks.\n   Realistically, you'll finish 3-4. Drop the lowest priority one now.`;
+      }
+      
+      // Count stats for message
+      const overdueCount = overdueTasks.length;
+      const pendingCount = tasks.filter(t => t.status === 'pending').length;
+      
+      // Build the full message
+      let message = "";
+      const sarcasmLevel = user?.sarcasmLevel || 'brutal';
+      
+      if (sarcasmLevel === 'mild') {
+        message = `Your despair index is at ${despairIndex}%. That's concerning.`;
+      } else if (sarcasmLevel === 'damage') {
+        message = `${despairIndex}% despair? You're a disappointment.`;
+      } else {
+        message = `${despairIndex}% despair? Impressive numbers. Too bad it's not helping your grades.`;
+      }
+      
+      // Add context
+      if (overdueCount > 0) {
+        message += `\n\n📊 You have ${overdueCount} overdue task${overdueCount > 1 ? 's' : ''}.`;
+      }
+      if (pendingCount > 0) {
+        message += `\n📊 ${pendingCount} pending task${pendingCount > 1 ? 's' : ''} waiting.`;
+      }
+      
+      // Add drop suggestion
+      message += dropSuggestion;
+      
+      // Add final encouragement
+      if (oldestOverdue) {
+        message += `\n\n💡 Real talk: One less task = one less stress. You can't do everything. That's okay.`;
+      } else {
+        message += `\n\n💡 Pick 3 tasks. Do those. Ignore the rest. You're not superhuman.`;
+      }
       
       await this.createNotification(userId, {
         type: 'despair_alert',
@@ -251,11 +303,12 @@ async checkAndCreateDespairAlert(userId) {
         message: message,
         metadata: {
           despairIndex,
-          priority: 'high'
+          priority: 'high',
+          suggestedDropTaskId: oldestOverdue?._id || null
         }
       });
       
-      console.log(`✅ [DESPAIR] Despair alert sent for ${despairIndex}%`);
+      console.log(`✅ [DESPAIR] Despair alert sent for ${despairIndex}% with drop suggestion`);
     } else {
       console.log(`⏰ [DESPAIR] Skipping - alert sent within last 24 hours`);
     }
@@ -263,7 +316,6 @@ async checkAndCreateDespairAlert(userId) {
     console.log(`✅ [DESPAIR] Despair ${despairIndex}% < 70%, no alert needed`);
   }
 }
-
 calculateDespairIndex(tasks) {
   console.log(`🔢 [CALC] Calculating despair for ${tasks.length} tasks`);
   
@@ -362,6 +414,87 @@ calculateDespairIndex(tasks) {
   console.log(`🔢 [CALC] Highest task: ${highestTaskDespair}, Final: ${finalDespair}%`);
   
   return finalDespair;
+}
+// Add this new function to the NotificationService class
+
+// Check for ignored tasks and send contextual roasts
+async checkAndSendContextualRoasts() {
+  console.log(`🔥 [ROAST] Checking for ignored tasks...`);
+  
+  const now = new Date();
+  const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+  
+  // Find tasks that:
+  // 1. Are pending or ignored (not started)
+  // 2. Created at least 3 days ago
+  // 3. Haven't been roasted in the last 7 days
+  const ignoredTasks = await Task.find({
+    status: { $in: ['pending', 'ignored'] },
+    createdAt: { $lt: threeDaysAgo },
+    $or: [
+      { lastRoastedAt: null },
+      { lastRoastedAt: { $lt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } }
+    ]
+  }).populate('user');
+  
+  console.log(`🔥 [ROAST] Found ${ignoredTasks.length} ignored tasks`);
+  
+  for (const task of ignoredTasks) {
+    const daysIgnored = Math.ceil((now - task.createdAt) / (1000 * 60 * 60 * 24));
+    
+    // Get user's sarcasm level for personalized roast
+    const user = await User.findById(task.user);
+    const sarcasmLevel = user?.sarcasmLevel || 'brutal';
+    
+    // Generate roast based on days ignored and sarcasm level
+    const roastMessage = this.generateRoast(task.title, daysIgnored, sarcasmLevel);
+    
+    // Send as notification
+    await this.createNotification(task.user, {
+      type: 'contextual_roast',
+      title: '🔥 Contextual Roast',
+      message: roastMessage,
+      metadata: {
+        taskId: task._id,
+        daysIgnored: daysIgnored,
+        priority: 'medium',
+        actionUrl: `/tasks/${task._id}`
+      }
+    });
+    
+    // Update last roasted timestamp
+    task.lastRoastedAt = now;
+    await task.save();
+    
+    console.log(`🔥 [ROAST] Roasted "${task.title}" (ignored for ${daysIgnored} days)`);
+  }
+}
+
+// Generate roast based on days ignored and sarcasm level
+generateRoast(taskTitle, daysIgnored, sarcasmLevel) {
+  const roasts = {
+    mild: {
+      3: `"${taskTitle}" has been sitting there for 3 days. Maybe look at it? No pressure.`,
+      7: `"${taskTitle}" is 1 week old. Time is a concept, but deadlines aren't.`,
+      14: `"${taskTitle}" is 2 weeks old. At this point, just delete it. You're not doing it.`
+    },
+    brutal: {
+      3: `"${taskTitle}" ignored for 3 days. Still procrastinating? Shocking.`,
+      7: `"${taskTitle}" is 1 week old. Your future self is already disappointed.`,
+      14: `"${taskTitle}" is 2 weeks old. Just drop it. You're not that person.`
+    },
+    damage: {
+      3: `"${taskTitle}" ignored for 3 days. Your ancestors didn't survive evolution for this.`,
+      7: `"${taskTitle}" is 1 week old. At this point, just embrace failure.`,
+      14: `"${taskTitle}" is 2 weeks old. Delete it. You're never doing it. Accept it.`
+    }
+  };
+  
+  const level = roasts[sarcasmLevel] || roasts.brutal;
+  
+  if (daysIgnored >= 14) return level[14] || level[7];
+  if (daysIgnored >= 7) return level[7] || level[3];
+  return level[3] || `"${taskTitle}" has been ignored for ${daysIgnored} days. Maybe start? Or don't.`;
 }
 }
 

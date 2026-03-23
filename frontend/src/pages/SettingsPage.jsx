@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ProfilePictureUpload from '../components/ProfilePictureUpload';
-import { User, Bell, LogOut, Mail, Key, Download, Trash2, Sparkles, Volume2, AlertTriangle, Calendar } from 'lucide-react';
+import { User, Bell, LogOut, Mail, Key, Download, Trash2, Sparkles, AlertTriangle, Calendar } from 'lucide-react';
 
 // Import modals
 import ChangeEmailModal from '../components/modals/ChangeEmailModal';
@@ -21,7 +21,6 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
 
   // User data states
   const [deadlineReminders, setDeadlineReminders] = useState(true);
-  const [dailyRoasts, setDailyRoasts] = useState(false);
   const [despairAlerts, setDespairAlerts] = useState(true);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -29,11 +28,11 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
   const [despairIndex, setDespairIndex] = useState(0);
   const [currentSarcasmLevel, setCurrentSarcasmLevel] = useState(sarcasmLevel);
 
-  // Fetch user data from backend on mount - ALWAYS fetch fresh!
+  // Fetch user data from backend on mount
   useEffect(() => {
     fetchUserData();
     fetchDashboardData();
-  }, []); // Empty dependency array means runs on every mount
+  }, []);
 
   const fetchUserData = async () => {
     try {
@@ -61,17 +60,10 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
         setProfileImage(user.profilePicture || null);
         setCurrentSarcasmLevel(user.sarcasmLevel || 'brutal');
         
-        // Load notification preferences - IMPORTANT: Use actual values from server
+        // Load notification preferences
         if (user.notificationPreferences) {
-          console.log('Notification preferences from server:', user.notificationPreferences);
           setDeadlineReminders(user.notificationPreferences.deadlineReminders ?? true);
-          setDailyRoasts(user.notificationPreferences.dailyRoasts ?? false);
           setDespairAlerts(user.notificationPreferences.despairAlerts ?? true);
-        } else {
-          // Default values if no preferences exist
-          setDeadlineReminders(true);
-          setDailyRoasts(false);
-          setDespairAlerts(true);
         }
         
         // Update localStorage as backup
@@ -88,7 +80,6 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
-      // Fallback to localStorage
       setUsername(localStorage.getItem('username') || 'Suffering Student');
       setProfileImage(localStorage.getItem('profileImage') || null);
       setCurrentSarcasmLevel(localStorage.getItem('sarcasmLevel') || sarcasmLevel);
@@ -123,11 +114,8 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
 
       const preferences = {
         deadlineReminders,
-        dailyRoasts,
         despairAlerts,
       };
-
-      console.log('Saving preferences:', preferences);
 
       const response = await fetch('http://localhost:5000/api/users/notifications', {
         method: 'PATCH',
@@ -138,16 +126,9 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
         body: JSON.stringify(preferences)
       });
 
-      const data = await response.json();
-      console.log('Save response:', data);
-
       if (response.ok) {
         setSuccess('Notification preferences updated!');
-        // Clear success message after 3 seconds
         setTimeout(() => setSuccess(''), 3000);
-      } else {
-        setError(data.message || 'Failed to save preferences');
-        setTimeout(() => setError(''), 3000);
       }
     } catch (error) {
       console.error('Error saving preferences:', error);
@@ -156,12 +137,11 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
     }
   };
 
-  // Handle toggle changes - SAVE IMMEDIATELY
+  // Handle toggle changes
   const handleDeadlineToggle = async () => {
     const newValue = !deadlineReminders;
     setDeadlineReminders(newValue);
     
-    // Save immediately
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -174,7 +154,6 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
         },
         body: JSON.stringify({
           deadlineReminders: newValue,
-          dailyRoasts,
           despairAlerts
         })
       });
@@ -185,41 +164,7 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
       }
     } catch (error) {
       console.error('Error saving preference:', error);
-      // Revert on error
       setDeadlineReminders(!newValue);
-      setError('Failed to save preference');
-      setTimeout(() => setError(''), 2000);
-    }
-  };
-
-  const handleDailyRoastsToggle = async () => {
-    const newValue = !dailyRoasts;
-    setDailyRoasts(newValue);
-    
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch('http://localhost:5000/api/users/notifications', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          deadlineReminders,
-          dailyRoasts: newValue,
-          despairAlerts
-        })
-      });
-
-      if (response.ok) {
-        setSuccess(`Daily roasts ${newValue ? 'enabled' : 'disabled'}`);
-        setTimeout(() => setSuccess(''), 2000);
-      }
-    } catch (error) {
-      console.error('Error saving preference:', error);
-      setDailyRoasts(!newValue);
       setError('Failed to save preference');
       setTimeout(() => setError(''), 2000);
     }
@@ -241,7 +186,6 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
         },
         body: JSON.stringify({
           deadlineReminders,
-          dailyRoasts,
           despairAlerts: newValue
         })
       });
@@ -258,7 +202,7 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
     }
   };
 
-  // Handle sarcasm/roast level change
+  // Handle sarcasm/roast level change with event dispatch
   const handleSarcasmChange = async (level) => {
     setCurrentSarcasmLevel(level);
     onSarcasmChange(level);
@@ -278,6 +222,9 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
         setSuccess(`Roast mode set to ${level}!`);
         setTimeout(() => setSuccess(''), 2000);
         localStorage.setItem('sarcasmLevel', level);
+        
+        // Dispatch event for other components to refresh
+        window.dispatchEvent(new CustomEvent('sarcasmChanged', { detail: { level } }));
         window.dispatchEvent(new Event('refreshDashboard'));
       }
     } catch (error) {
@@ -536,6 +483,7 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
                 ))}
               </div>
 
+              {/* Live Preview */}
               <div className="bg-gradient-to-br from-purple-900/30 to-gray-900/50 border border-purple-700/30 rounded-xl p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse"></div>
@@ -589,25 +537,6 @@ const SettingsPage = ({ sarcasmLevel = 'brutal', onSarcasmChange = () => {}, onL
                     onClick={handleDeadlineToggle}
                     className={`w-14 h-7 flex items-center rounded-full p-1 transition-all ${
                       deadlineReminders ? 'bg-emerald-500 justify-end' : 'bg-gray-700 justify-start'
-                    }`}
-                  >
-                    <div className="w-5 h-5 bg-white rounded-full"></div>
-                  </button>
-                </div>
-
-                {/* Daily Roasts */}
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Sparkles className="w-4 h-4 text-amber-400" />
-                      <h4 className="font-medium text-gray-200">Daily Roasts</h4>
-                    </div>
-                    <p className="text-sm text-gray-400 pl-6">Receive motivational insults daily</p>
-                  </div>
-                  <button
-                    onClick={handleDailyRoastsToggle}
-                    className={`w-14 h-7 flex items-center rounded-full p-1 transition-all ${
-                      dailyRoasts ? 'bg-emerald-500 justify-end' : 'bg-gray-700 justify-start'
                     }`}
                   >
                     <div className="w-5 h-5 bg-white rounded-full"></div>

@@ -7,11 +7,6 @@ const notificationSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  type: {
-    type: String,
-    enum: ['deadline', 'daily_roast', 'despair_alert', 'task_reminder', 'achievement', 'system'],
-    required: true
-  },
   title: {
     type: String,
     required: true
@@ -35,6 +30,11 @@ const notificationSchema = new mongoose.Schema({
     default: false,
     index: true
   },
+  type: {
+  type: String,
+  enum: ['deadline', 'daily_roast', 'despair_alert', 'task_reminder', 'achievement', 'system', 'contextual_roast'],
+  required: true
+},
   createdAt: {
     type: Date,
     default: Date.now,

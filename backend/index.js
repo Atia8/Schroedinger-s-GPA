@@ -3,6 +3,8 @@ const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const cron = require('node-cron');
+
 require("dotenv").config();
 
 // Import routes
@@ -71,6 +73,18 @@ app.get("/", (req, res) => {
     }
   });
 });
+
+
+cron.schedule('0 */6 * * *', async () => {
+  console.log('Running contextual roast check...');
+  
+  const NotificationService = require('./services/notificationService');
+  const notificationService = new NotificationService(socketManager);
+  
+  await notificationService.checkAndSendContextualRoasts();
+});
+
+
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

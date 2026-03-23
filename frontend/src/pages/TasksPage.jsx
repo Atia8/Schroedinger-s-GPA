@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Calendar, TrendingUp,X,Trash2 } from 'lucide-react';
+import { Plus, Calendar, TrendingUp, X, Trash2 } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
@@ -13,22 +13,95 @@ export default function TasksPage() {
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDeadline, setNewDeadline] = useState('');
+  const [sarcasmLevel, setSarcasmLevel] = useState('brutal');
+
+  // Fetch user's sarcasm level and tasks
+  const fetchData = async () => {
+    const token = localStorage.getItem('token');
+    
+    // Get user's sarcasm level
+    try {
+      const userRes = await fetch('http://localhost:5000/api/users/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const userData = await userRes.json();
+      setSarcasmLevel(userData.user?.sarcasmLevel || 'brutal');
+    } catch (err) {
+      console.error('Failed to fetch user:', err);
+    }
+    
+    // Get tasks
+    fetch('http://localhost:5000/api/tasks', {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(res => res.json())
+      .then(data => setTasks(data))
+      .catch(err => console.error(err));
+  };
 
   useEffect(() => {
-     const token = localStorage.getItem('token');
+    fetchData();
+    
+    // Listen for sarcasm changes from settings
+    const handleSarcasmChange = () => fetchData();
+    window.addEventListener('sarcasmChanged', handleSarcasmChange);
+    window.addEventListener('refreshDashboard', handleSarcasmChange);
+    
+    return () => {
+      window.removeEventListener('sarcasmChanged', handleSarcasmChange);
+      window.removeEventListener('refreshDashboard', handleSarcasmChange);
+    };
+  }, []);
 
-    fetch('http://localhost:5000/api/tasks', {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`, // ← include JWT
-    },
-  })
-    .then(res => res.json())
-    .then(data => setTasks(data))
-    .catch(err => console.error(err));
-}, []);
+  // Generate roast based on task and sarcasm level
+  const getTaskRoast = (task) => {
+    const now = new Date();
+    const deadline = new Date(task.deadline);
+    const hoursUntil = (deadline - now) / (1000 * 60 * 60);
+    
+    const roasts = {
+      mild: {
+        overdue: `"${task.title}" is overdue. Time is a concept, but deadlines aren't.`,
+        dueSoon: `"${task.title}" is due in ${Math.ceil(hoursUntil)} hours. Consider starting.`,
+        pending: `"${task.title}" is waiting. It's very patient. Unlike your future self.`
+      },
+      brutal: {
+        overdue: `"${task.title}" is overdue. Still procrastinating? Shocking.`,
+        dueSoon: `"${task.title}" is due in ${Math.ceil(hoursUntil)} hours. They're not going to do themselves.`,
+        pending: `"${task.title}" is waiting. Your future self is already disappointed.`
+      },
+      damage: {
+        overdue: `"${task.title}" is overdue. At this point, just drop it.`,
+        dueSoon: `"${task.title}" is due in ${Math.ceil(hoursUntil)} hours. Your ancestors didn't survive for this.`,
+        pending: `"${task.title}" is waiting. Just accept your fate.`
+      }
+    };
+    
+    const mode = roasts[sarcasmLevel] || roasts.brutal;
+    
+    if (task.status === 'overdue') return mode.overdue;
+    if (hoursUntil <= 24 && hoursUntil > 0) return mode.dueSoon;
+    return mode.pending;
+  };
 
-// --- DELETE TASK FUNCTION ---
+  // Get NPC emoji based on sarcasm level
+  const getNpcEmoji = () => {
+    if (sarcasmLevel === 'damage') return '💀';
+    if (sarcasmLevel === 'brutal') return '😈';
+    return '😐';
+  };
+
+  // Get NPC name based on sarcasm level
+  const getNpcName = () => {
+    if (sarcasmLevel === 'damage') return 'The Destroyer';
+    if (sarcasmLevel === 'brutal') return 'Honest Friend';
+    return 'Passive Mentor';
+  };
+
+  // --- DELETE TASK FUNCTION ---
   const handleDeleteTask = async (taskId) => {
     const token = localStorage.getItem('token');
     try {
@@ -36,24 +109,22 @@ export default function TasksPage() {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
       });
-      // Remove from state
       setTasks(prev => prev.filter(t => t._id !== taskId));
     } catch (err) {
       console.error(err);
     }
   };
 
-
   const handleAddTask = async () => {
-     const token = localStorage.getItem('token'); 
+    const token = localStorage.getItem('token'); 
     if (!newTitle || !newDeadline) return;
     try {
       const res = await fetch('http://localhost:5000/api/tasks', {
         method: 'POST',
         headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`, // ← include JWT
-      },
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ title: newTitle, deadline: newDeadline }),
       });
       const data = await res.json();
@@ -66,7 +137,6 @@ export default function TasksPage() {
     }
   };
 
-
   const getStatusBadge = (status) => {
     const badges = {
       ignored: <Badge className="bg-[#8a8a9f]/20 text-[#8a8a9f] border-[#8a8a9f]/30">Ignored</Badge>,
@@ -75,13 +145,6 @@ export default function TasksPage() {
       overdue: <Badge className="bg-[#ff6b35]/20 text-[#ff6b35] border-[#ff6b35]/30">Overdue</Badge>,
     };
     return badges[status] || null;
-  };
-
-  const getNpcEmoji = (npc) => {
-    if (!npc) return '😊';
-    if (npc.includes('Mentor')) return '😤';
-    if (npc.includes('Friend')) return '😈';
-    return '😊';
   };
 
   const filterOptions = [
@@ -101,6 +164,9 @@ export default function TasksPage() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2 text-white">Avoidance Headquarters</h1>
           <p className="text-[#8a8a9f] italic">Your command center for professional procrastination.</p>
+          <div className="mt-2 text-xs text-gray-500">
+            Roast Mode: <span className="text-[#ff6b35]">{sarcasmLevel.toUpperCase()}</span>
+          </div>
         </div>
 
         <div className="flex gap-6">
@@ -149,20 +215,19 @@ export default function TasksPage() {
                         </div>
                       </div>
                     </div>
-           {getStatusBadge(task.status)}
-           {/* Delete Button */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation(); // prevent drawer opening
-          handleDeleteTask(task._id);
-        }}
-        className="ml-2 text-red-500 hover:text-red-700"
-      >
-        <Trash2 size={20} />
-      </button>
+                    {getStatusBadge(task.status)}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTask(task._id);
+                      }}
+                      className="ml-2 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 size={20} />
+                    </button>
                   </div>
                   
-                  {/* Roast Panel - Signature Feature */}
+                  {/* Roast Panel - Dynamic based on sarcasm level */}
                   <div className="bg-gradient-to-br from-[#ff6b35]/10 via-[#1a1a28] to-[#ff3366]/10 border border-[#ff6b35]/30 rounded-xl p-5 backdrop-blur-sm">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="w-2 h-2 rounded-full bg-[#ff6b35] animate-pulse" />
@@ -170,21 +235,17 @@ export default function TasksPage() {
                     </div>
                     
                     <div className="space-y-3">
-                      {(!task.npcComments || task.npcComments.length === 0) ? (
-                        <p className="text-sm italic text-gray-400">No one has roasted you yet 🙂</p>
-                      ) : (
-                        task.npcComments.map((comment, idx) => (
-                          <div key={idx} className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-full bg-[#2a2a3f] flex items-center justify-center text-xs flex-shrink-0">
-                              {getNpcEmoji(comment.npc)}
-                            </div>
-                            <div className="flex-1">
-                              <div className="text-xs text-[#ff6b35] font-medium mb-1">{comment.npc || 'NPC'}:</div>
-                              <p className="text-sm italic text-[#e8e8f0]">"{comment.comment}"</p>
-                            </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#2a2a3f] flex items-center justify-center text-lg flex-shrink-0">
+                          {getNpcEmoji()}
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-xs text-[#ff6b35] font-medium mb-1">
+                            {getNpcName()}:
                           </div>
-                        ))
-                      )}
+                          <p className="text-sm italic text-[#e8e8f0]">"{getTaskRoast(task)}"</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -206,8 +267,6 @@ export default function TasksPage() {
       {/* Task Details Drawer */}
       <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
         <DialogContent className="bg-[#151520] border-white/10 text-white max-w-2xl">
-        
-
           {selectedTask && (
             <>
               <DialogHeader>
@@ -232,25 +291,15 @@ export default function TasksPage() {
                 
                 <div>
                   <div className="text-sm text-[#8a8a9f] mb-3">NPC Commentary</div>
-                  {(!selectedTask.npcComments || selectedTask.npcComments.length === 0) ? (
-                    <p className="text-sm italic text-gray-400">No NPC comments yet.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {selectedTask.npcComments.map((comment, idx) => (
-                        <div key={idx} className="bg-[#1a1a28] border border-white/5 rounded-lg p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="text-2xl">
-                              {getNpcEmoji(comment.npc)}
-                            </div>
-                            <div>
-                              <div className="text-[#ff6b35] font-medium mb-1">{comment.npc || 'NPC'}</div>
-                              <p className="italic text-white">"{comment.comment}"</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                  <div className="bg-[#1a1a28] border border-white/5 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="text-2xl">{getNpcEmoji()}</div>
+                      <div>
+                        <div className="text-[#ff6b35] font-medium mb-1">{getNpcName()}</div>
+                        <p className="italic text-white">"{getTaskRoast(selectedTask)}"</p>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
                 
                 <Button className="w-full bg-[#00d4ff] text-black hover:bg-[#00d4ff]/90">
@@ -265,7 +314,6 @@ export default function TasksPage() {
       {/* Add Task Modal */}
       <Dialog open={isAddingTask} onOpenChange={setIsAddingTask}>
         <DialogContent className="bg-[#151520] border-white/10 text-white">
-        
           <DialogHeader>
             <DialogTitle className="text-white">Add New Task</DialogTitle>
           </DialogHeader>

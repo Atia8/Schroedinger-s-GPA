@@ -26,13 +26,14 @@ exports.createTask = async (req, res) => {
     const socketManager = req.app.get('socketManager');
     const notifService = getNotificationService(socketManager);
 
+    // 🎯 FIXED: Status is 'overdue' if deadline passed, otherwise 'ignored'
     const newTask = new Task({
       user: req.user.userId,
       title,
       deadline,
       description,
       escalationLevel: "normal",
-      status: new Date(deadline) < new Date() ? 'overdue' : 'pending'
+      status: new Date(deadline) < new Date() ? 'overdue' : 'ignored',  // ← Changed from 'pending' to 'ignored'
     });
 
     newTask.despairContribution = calculateDespair(newTask);
@@ -78,8 +79,6 @@ exports.deleteTask = async (req, res) => {
     
     await Task.findOneAndDelete({ _id: id, user: req.user.userId });
     
-    // REMOVED: No notification for task deletion (too spammy)
-    // Only check despair after deletion
     const socketManager = req.app.get('socketManager');
     const notifService = getNotificationService(socketManager);
     await notifService.checkAndCreateDespairAlert(req.user.userId);
@@ -122,8 +121,6 @@ exports.updateTask = async (req, res) => {
         }
       });
     }
-    
-    // REMOVED: No panic notification (too spammy)
     
     await notifService.checkAndCreateDespairAlert(req.user.userId);
     

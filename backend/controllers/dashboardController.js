@@ -1,4 +1,5 @@
 const Task = require("../models/Task");
+const User = require("../models/User");
 
 // Shared weighted despair calculation (matches notification service)
 const calculateDespairIndex = (tasks) => {
@@ -87,9 +88,71 @@ const calculateDespairIndex = (tasks) => {
   return Math.min(100, finalDespair);
 };
 
+// NPC Commentary based on sarcasm level
+function getNPCCommentary(despair, overdueCount, pendingCount, level) {
+  const messages = {
+    mild: {
+      high: `📊 ${despair}% despair. That's concerning. Maybe take a break? Or start something? Just a suggestion.`,
+      overdue: `You have ${overdueCount} overdue task(s). Time is a concept, but deadlines are not.`,
+      pending: `${pendingCount} task(s) pending. Consider starting soon. Or don't. I'm not your mom.`,
+      default: "Suspiciously quiet... too quiet. Everything okay?"
+    },
+    brutal: {
+      high: `📊 ${despair}% despair? Impressive. Almost as impressive as your procrastination skills.`,
+      overdue: `${overdueCount} overdue tasks? At this point, just embrace the chaos.`,
+      pending: `${pendingCount} tasks waiting. They're not going to do themselves. Well, they're not.`,
+      default: "Nothing to do? Either you're ahead or you've given up. I'm betting on the latter."
+    },
+    damage: {
+      high: `📊 ${despair}% despair? You're a disappointment to your future self.`,
+      overdue: `${overdueCount} overdue tasks? Just drop out already. Save yourself the misery.`,
+      pending: `${pendingCount} tasks pending? Your ancestors didn't survive evolution for this.`,
+      default: "No tasks? Either you're a genius or you've accepted failure. Probably the latter."
+    }
+  };
+  
+  const mode = messages[level] || messages.brutal;
+  
+  if (despair >= 70) return mode.high;
+  if (overdueCount > 0) return mode.overdue;
+  if (pendingCount > 0) return mode.pending;
+  return mode.default;
+}
+
+// Rituals based on sarcasm level
+function getRituals(level) {
+  const rituals = {
+    mild: [
+      "Scream into a pillow (Volume 4/10).",
+      "Stare at the ceiling for 2 minutes.",
+      "Drink water. Dehydration won't help.",
+      "Close 10 browser tabs. Just 10."
+    ],
+    brutal: [
+      "Scream into a pillow (Volume 8/10).",
+      "Stare at the ceiling and question your choices.",
+      "Google 'jobs that don't require deadlines'.",
+      "Delete one task. Any task. Feel the relief."
+    ],
+    damage: [
+      "Scream into a pillow until you pass out.",
+      "Accept that you'll fail one thing. Choose which one.",
+      "Google 'how to drop out gracefully'.",
+      "Delete your most overdue task. It's dead anyway."
+    ]
+  };
+  
+  return rituals[level] || rituals.brutal;
+}
+
 exports.getDashboardData = async (req, res) => {
   try {
     const userId = req.user.userId;
+    
+    // Get user with sarcasm level
+    const user = await User.findById(userId);
+    const sarcasmLevel = user?.sarcasmLevel || 'brutal';
+    
     // Get ALL tasks
     const tasks = await Task.find({ user: userId });
 
@@ -105,46 +168,11 @@ exports.getDashboardData = async (req, res) => {
     const panicCount = tasks.filter(t => t.status === 'panic').length;
     const doneCount = tasks.filter(t => t.status === 'done').length;
     
-    // --- Dynamic NPC Commentary ---
-    let npcMessage = "Suspiciously quiet... too quiet.";
+    // --- Dynamic NPC Commentary based on sarcasm level ---
+    let npcMessage = getNPCCommentary(finalDespair, overdueCount, pendingCount, sarcasmLevel);
     
-    if (finalDespair >= 90) {
-      npcMessage = "I'd tell you to calm down, but statistically, you're already dead.";
-    } else if (finalDespair >= 70) {
-      // Find the oldest overdue task to suggest dropping
-      const oldestOverdue = tasks
-        .filter(t => t.status === 'overdue')
-        .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))[0];
-      
-      if (oldestOverdue) {
-        npcMessage = `⚠️ ${finalDespair}% despair. Drop "${oldestOverdue.title}" (due ${new Date(oldestOverdue.deadline).toLocaleDateString()}). You're not doing it anyway.`;
-      } else {
-        npcMessage = `⚠️ ${finalDespair}% despair. You have ${overdueCount} overdue tasks. Drop one. Now.`;
-      }
-    } else if (finalDespair >= 50) {
-      npcMessage = `📊 ${finalDespair}% despair. Sleep is for people who don't have deadlines.`;
-    } else if (finalDespair >= 30) {
-      npcMessage = `📊 ${finalDespair}% despair. I can hear your heart rate from here.`;
-    } else if (finalDespair < 10 && tasks.length > 0) {
-      npcMessage = "You're surprisingly calm. Are you forgetting something?";
-    }
-    
-    // Overdue-specific messages for lower despair
-    if (overdueCount >= 3 && finalDespair < 70) {
-      npcMessage = `You have ${overdueCount} overdue tasks. The oldest is from ${tasks.filter(t => t.status === 'overdue').sort((a,b) => new Date(a.deadline) - new Date(b.deadline))[0]?.title || 'a task'}. Just drop it.`;
-    }
-
-    // --- Ritual Generator ---
-    const rituals = [
-      "Scream into a pillow (Volume 8/10).",
-      "Stare at the ceiling and dissociate.",
-      "Drink water. No, coffee doesn't count.",
-      "Google 'high paying jobs that require no degree'.",
-      "Lie on the floor for exactly 3 minutes.",
-      "Close all 47 browser tabs. Do it.",
-      "Delete one task. Any task. Feel the relief.",
-      "Accept that you will fail one thing. Choose which one."
-    ];
+    // --- Ritual Generator based on sarcasm level ---
+    const rituals = getRituals(sarcasmLevel);
     const randomRitual = rituals[Math.floor(Math.random() * rituals.length)];
 
     // --- Urgent Tasks (due in 24h or overdue) ---
@@ -167,6 +195,7 @@ exports.getDashboardData = async (req, res) => {
       despairIndex: finalDespair,
       npcMessage,
       ritual: randomRitual,
+      sarcasmLevel, // Send to frontend
       stats: {
         total: tasks.length,
         overdue: overdueCount,

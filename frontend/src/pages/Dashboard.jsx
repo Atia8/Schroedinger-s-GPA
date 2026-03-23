@@ -6,6 +6,7 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeEffect, setActiveEffect] = useState(null);
+  const [sarcasmLevel, setSarcasmLevel] = useState('brutal');
 
   // Function to trigger despair check on the backend
   const triggerDespairCheck = async () => {
@@ -34,6 +35,7 @@ export default function Dashboard() {
         if (res.ok) {
           const dashboardData = await res.json();
           setData(dashboardData);
+          setSarcasmLevel(dashboardData.sarcasmLevel || 'brutal');
           
           // After loading dashboard, check if despair is high and trigger alert
           if (dashboardData.despairIndex >= 70) {
@@ -47,7 +49,21 @@ export default function Dashboard() {
         setLoading(false);
       }
     };
+    
     fetchDashboard();
+    
+    // Listen for sarcasm changes
+    const handleSarcasmChange = () => {
+      fetchDashboard();
+    };
+    
+    window.addEventListener('sarcasmChanged', handleSarcasmChange);
+    window.addEventListener('refreshDashboard', handleSarcasmChange);
+    
+    return () => {
+      window.removeEventListener('sarcasmChanged', handleSarcasmChange);
+      window.removeEventListener('refreshDashboard', handleSarcasmChange);
+    };
   }, []);
 
   // Manual test button function
@@ -74,6 +90,13 @@ export default function Dashboard() {
 
   const currentMoods = getMoods(data.despairIndex);
 
+  // Get NPC name based on sarcasm level
+  const getNpcName = () => {
+    if (sarcasmLevel === 'damage') return 'The Destroyer';
+    if (sarcasmLevel === 'brutal') return 'Honest Friend';
+    return 'Passive Mentor';
+  };
+
   return (
     <div className="min-h-screen bg-[#1A1A1B] text-white p-6 md:p-12 pt-24">
       {/* Header */}
@@ -81,9 +104,12 @@ export default function Dashboard() {
         <div>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent">Chaos Dashboard</h1>
           <p className="text-gray-400">Welcome to your daily breakdown.</p>
+          <div className="mt-1 text-xs text-gray-500">
+            Roast Mode: <span className="text-[#ff6b35]">{sarcasmLevel.toUpperCase()}</span> | NPC: {getNpcName()}
+          </div>
         </div>
         
-        {/* Add Test Button for Despair Alerts (remove in production) */}
+        {/* Test Button for Despair Alerts */}
         <button
           onClick={testDespairAlert}
           className="text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded-lg transition-colors flex items-center gap-1"
@@ -101,13 +127,13 @@ export default function Dashboard() {
           <PanicMeter value={data.despairIndex} />
         </div>
 
-        {/* 2. NPC Widget */}
+        {/* 2. NPC Widget - Dynamic based on sarcasm level */}
         <div className="bg-[#2C2C2E] p-6 rounded-xl border-l-4 border-panic-orange shadow-lg flex flex-col justify-center relative overflow-hidden group">
           <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <Skull size={100} />
           </div>
           <h3 className="text-panic-orange font-bold mb-2 uppercase text-xs tracking-widest flex items-center gap-2">
-            <Skull size={16}/> Companion Message
+            {sarcasmLevel === 'damage' ? '💀' : sarcasmLevel === 'brutal' ? '😈' : '😐'} {getNpcName()}
           </h3>
           <p className="text-xl italic text-gray-200 z-10">"{data.npcMessage}"</p>
         </div>
