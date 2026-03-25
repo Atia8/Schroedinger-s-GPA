@@ -9,6 +9,10 @@ import { Label } from '../components/ui/label';
 export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState('all');
+
+  const [isEditingTask, setIsEditingTask] = useState(false);
+  const [editedStatus, setEditedStatus] = useState('');
+
   const [selectedTask, setSelectedTask] = useState(null);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -17,7 +21,7 @@ export default function TasksPage() {
 
   const fetchData = async () => {
     const token = localStorage.getItem('token');
-    
+
     try {
       const userRes = await fetch('http://localhost:5000/api/users/profile', {
         headers: { Authorization: `Bearer ${token}` }
@@ -27,7 +31,7 @@ export default function TasksPage() {
     } catch (err) {
       console.error('Failed to fetch user:', err);
     }
-    
+
     fetch('http://localhost:5000/api/tasks', {
       headers: {
         'Content-Type': 'application/json',
@@ -41,131 +45,131 @@ export default function TasksPage() {
 
   useEffect(() => {
     fetchData();
-    
+
     const handleSarcasmChange = () => fetchData();
     window.addEventListener('sarcasmChanged', handleSarcasmChange);
     window.addEventListener('refreshDashboard', handleSarcasmChange);
-    
+
     return () => {
       window.removeEventListener('sarcasmChanged', handleSarcasmChange);
       window.removeEventListener('refreshDashboard', handleSarcasmChange);
     };
   }, []);
 
-// Dynamic roast based on task status and sarcasm level (WITH VARIATIONS)
-const getTaskRoast = (task) => {
-  const now = new Date();
-  const deadline = new Date(task.deadline);
-  const hoursUntilDeadline = (deadline - now) / (1000 * 60 * 60);
-  const daysUntil = Math.ceil(hoursUntilDeadline / 24);
-  const daysOverdue = Math.ceil((now - deadline) / (1000 * 60 * 60 * 24));
-  
-  // Multiple roast variations for each status
-  const roastVariations = {
-    mild: {
-      overdue: [
-        `"${task.title}" is ${daysOverdue} day(s) overdue. Time is a concept, but deadlines aren't.`,
-        `"${task.title}" has been sitting there for ${daysOverdue} days. It's not going to do itself.`,
-        `"${task.title}" is ${daysOverdue} day(s) overdue. Consider starting. Or don't. Your call.`
-      ],
-      ignored: [
-        `"${task.title}" is being ignored. It sits there. Judging you. Silently.`,
-        `"${task.title}" is pretending not to exist. You're good at that.`,
-        `"${task.title}" is waiting. And waiting. And waiting...`
-      ],
-      panic: [
-        `"${task.title}" has pushed you into panic mode. Take a breath. Or don't.`,
-        `"${task.title}" is causing chaos. Deep breaths. Or scream. Both work.`,
-        `"${task.title}" = panic. Maybe just start. ANYTHING helps.`
-      ],
-      pending: [
-        `"${task.title}" is waiting. It's very patient. Unlike your future self.`,
-        `"${task.title}" is on the list. Still. Has been for a while.`,
-        `"${task.title}" exists. That's... something.`
-      ],
-      'in-progress': [
-        `"${task.title}" is in progress. Good. Keep going. Maybe.`,
-        `"${task.title}" is being worked on. Don't stop now.`,
-        `"${task.title}" - half done? Quarter done? At least it's started.`
-      ],
-      done: [
-        `"${task.title}" is done. Miracles do happen.`,
-        `"${task.title}" is complete. Don't let it go to your head.`,
-        `"${task.title}" is finished. One down, ${task.length} to go.`
-      ]
-    },
-    brutal: {
-      overdue: [
-        `"${task.title}" is ${daysOverdue} day(s) overdue. Still procrastinating? Shocking.`,
-        `"${task.title}" is ${daysOverdue} days late. Your future self is disappointed.`,
-        `"${daysOverdue} days. That's how long "${task.title}" has been ignored. Pathetic.`
-      ],
-      ignored: [
-        `"${task.title}" is ignored. Just like your responsibilities.`,
-        `"${task.title}" is being avoided. Shocking. Absolutely shocking.`,
-        `"${task.title}" is collecting dust. Just like your ambition.`
-      ],
-      panic: [
-        `"${task.title}" has sent you into panic mode. Impressive. Also pathetic.`,
-        `"${task.title}" is making you panic. Good. Maybe now you'll do something.`,
-        `Panic over "${task.title}"? Too late to panic now. Just do it.`
-      ],
-      pending: [
-        `"${task.title}" is waiting. Your future self hates you already.`,
-        `"${task.title}" hasn't been touched. Typical.`,
-        `"${task.title}" is still there. Are you surprised? I'm not.`
-      ],
-      'in-progress': [
-        `"${task.title}" is in progress. Don't stop now. You might actually finish.`,
-        `"${task.title}" is being worked on. Finally.`,
-        `"${task.title}" - started. Will it finish? History says no.`
-      ],
-      done: [
-        `"${task.title}" is done. Took you long enough.`,
-        `"${task.title}" is complete. Don't expect a parade.`,
-        `Finally. "${task.title}" is done. Only ${task.length - 1} left.`
-      ]
-    },
-    damage: {
-      overdue: [
-        `"${task.title}" is ${daysOverdue} day(s) overdue. Your ancestors are ashamed.`,
-        `"${daysOverdue} days overdue for "${task.title}". Just drop it. It's dead.`,
-        `"${task.title}" is ${daysOverdue} days late. You had one job.`
-      ],
-      ignored: [
-        `"${task.title}" is ignored. Just like your future.`,
-        `"${task.title}" is being avoided. Your ancestors are rolling in their graves.`,
-        `Ignoring "${task.title}" won't make it disappear. Neither will your problems.`
-      ],
-      panic: [
-        `"${task.title}" pushed you into panic. You're a disappointment to everyone.`,
-        `Panic over "${task.title}"? Your ancestors didn't survive for this.`,
-        `"${task.title}" = panic. Just accept your fate.`
-      ],
-      pending: [
-        `"${task.title}" is waiting. Your ancestors are rolling in their graves.`,
-        `"${task.title}" is still there. Pathetic.`,
-        `"${task.title}" hasn't been touched. Predictable.`
-      ],
-      'in-progress': [
-        `"${task.title}" is in progress. Don't mess this up. You will.`,
-        `"${task.title}" is being worked on. For now.`,
-        `Started "${task.title}". Will you finish? Doubtful.`
-      ],
-      done: [
-        `"${task.title}" is done. Fluke. Pure fluke.`,
-        `"${task.title}" is complete. Don't get used to it.`,
-        `Miraculously, "${task.title}" is done. One miracle won't save you.`
-      ]
-    }
+  // Dynamic roast based on task status and sarcasm level (WITH VARIATIONS)
+  const getTaskRoast = (task) => {
+    const now = new Date();
+    const deadline = new Date(task.deadline);
+    const hoursUntilDeadline = (deadline - now) / (1000 * 60 * 60);
+    const daysUntil = Math.ceil(hoursUntilDeadline / 24);
+    const daysOverdue = Math.ceil((now - deadline) / (1000 * 60 * 60 * 24));
+
+    // Multiple roast variations for each status
+    const roastVariations = {
+      mild: {
+        overdue: [
+          `"${task.title}" is ${daysOverdue} day(s) overdue. Time is a concept, but deadlines aren't.`,
+          `"${task.title}" has been sitting there for ${daysOverdue} days. It's not going to do itself.`,
+          `"${task.title}" is ${daysOverdue} day(s) overdue. Consider starting. Or don't. Your call.`
+        ],
+        ignored: [
+          `"${task.title}" is being ignored. It sits there. Judging you. Silently.`,
+          `"${task.title}" is pretending not to exist. You're good at that.`,
+          `"${task.title}" is waiting. And waiting. And waiting...`
+        ],
+        panic: [
+          `"${task.title}" has pushed you into panic mode. Take a breath. Or don't.`,
+          `"${task.title}" is causing chaos. Deep breaths. Or scream. Both work.`,
+          `"${task.title}" = panic. Maybe just start. ANYTHING helps.`
+        ],
+        pending: [
+          `"${task.title}" is waiting. It's very patient. Unlike your future self.`,
+          `"${task.title}" is on the list. Still. Has been for a while.`,
+          `"${task.title}" exists. That's... something.`
+        ],
+        'in-progress': [
+          `"${task.title}" is in progress. Good. Keep going. Maybe.`,
+          `"${task.title}" is being worked on. Don't stop now.`,
+          `"${task.title}" - half done? Quarter done? At least it's started.`
+        ],
+        done: [
+          `"${task.title}" is done. Miracles do happen.`,
+          `"${task.title}" is complete. Don't let it go to your head.`,
+          `"${task.title}" is finished. One down, ${task.length} to go.`
+        ]
+      },
+      brutal: {
+        overdue: [
+          `"${task.title}" is ${daysOverdue} day(s) overdue. Still procrastinating? Shocking.`,
+          `"${task.title}" is ${daysOverdue} days late. Your future self is disappointed.`,
+          `"${daysOverdue} days. That's how long "${task.title}" has been ignored. Pathetic.`
+        ],
+        ignored: [
+          `"${task.title}" is ignored. Just like your responsibilities.`,
+          `"${task.title}" is being avoided. Shocking. Absolutely shocking.`,
+          `"${task.title}" is collecting dust. Just like your ambition.`
+        ],
+        panic: [
+          `"${task.title}" has sent you into panic mode. Impressive. Also pathetic.`,
+          `"${task.title}" is making you panic. Good. Maybe now you'll do something.`,
+          `Panic over "${task.title}"? Too late to panic now. Just do it.`
+        ],
+        pending: [
+          `"${task.title}" is waiting. Your future self hates you already.`,
+          `"${task.title}" hasn't been touched. Typical.`,
+          `"${task.title}" is still there. Are you surprised? I'm not.`
+        ],
+        'in-progress': [
+          `"${task.title}" is in progress. Don't stop now. You might actually finish.`,
+          `"${task.title}" is being worked on. Finally.`,
+          `"${task.title}" - started. Will it finish? History says no.`
+        ],
+        done: [
+          `"${task.title}" is done. Took you long enough.`,
+          `"${task.title}" is complete. Don't expect a parade.`,
+          `Finally. "${task.title}" is done. Only ${task.length - 1} left.`
+        ]
+      },
+      damage: {
+        overdue: [
+          `"${task.title}" is ${daysOverdue} day(s) overdue. Your ancestors are ashamed.`,
+          `"${daysOverdue} days overdue for "${task.title}". Just drop it. It's dead.`,
+          `"${task.title}" is ${daysOverdue} days late. You had one job.`
+        ],
+        ignored: [
+          `"${task.title}" is ignored. Just like your future.`,
+          `"${task.title}" is being avoided. Your ancestors are rolling in their graves.`,
+          `Ignoring "${task.title}" won't make it disappear. Neither will your problems.`
+        ],
+        panic: [
+          `"${task.title}" pushed you into panic. You're a disappointment to everyone.`,
+          `Panic over "${task.title}"? Your ancestors didn't survive for this.`,
+          `"${task.title}" = panic. Just accept your fate.`
+        ],
+        pending: [
+          `"${task.title}" is waiting. Your ancestors are rolling in their graves.`,
+          `"${task.title}" is still there. Pathetic.`,
+          `"${task.title}" hasn't been touched. Predictable.`
+        ],
+        'in-progress': [
+          `"${task.title}" is in progress. Don't mess this up. You will.`,
+          `"${task.title}" is being worked on. For now.`,
+          `Started "${task.title}". Will you finish? Doubtful.`
+        ],
+        done: [
+          `"${task.title}" is done. Fluke. Pure fluke.`,
+          `"${task.title}" is complete. Don't get used to it.`,
+          `Miraculously, "${task.title}" is done. One miracle won't save you.`
+        ]
+      }
+    };
+
+    const variations = roastVariations[sarcasmLevel] || roastVariations.brutal;
+    const roastList = variations[task.status] || variations.pending;
+
+    // Randomly pick one variation
+    return roastList[Math.floor(Math.random() * roastList.length)];
   };
-  
-  const variations = roastVariations[sarcasmLevel] || roastVariations.brutal;
-  const roastList = variations[task.status] || variations.pending;
-  
-  // Randomly pick one variation
-  return roastList[Math.floor(Math.random() * roastList.length)];
-};
 
   const handleDeleteTask = async (taskId) => {
     const token = localStorage.getItem('token');
@@ -180,8 +184,32 @@ const getTaskRoast = (task) => {
     }
   };
 
+  const handleUpdateTask = async () => {
+    if (!selectedTask) return;
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`http://localhost:5000/api/tasks/${selectedTask._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: editedStatus }),
+      });
+      if (res.ok) {
+        const updatedTask = await res.json();
+        setTasks(prev => prev.map(t => t._id === updatedTask._id ? updatedTask : t));
+        setSelectedTask(updatedTask);
+        setIsEditingTask(false);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+
   const handleAddTask = async () => {
-    const token = localStorage.getItem('token'); 
+    const token = localStorage.getItem('token');
     if (!newTitle || !newDeadline) return;
     try {
       const res = await fetch('http://localhost:5000/api/tasks', {
@@ -244,11 +272,10 @@ const getTaskRoast = (task) => {
                   <button
                     key={option.value}
                     onClick={() => setFilter(option.value)}
-                    className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
-                      filter === option.value
-                        ? 'bg-[#00d4ff]/10 text-[#00d4ff] border border-[#00d4ff]/30'
-                        : 'hover:bg-white/5 text-[#8a8a9f]'
-                    }`}
+                    className={`w-full text-left px-4 py-2 rounded-lg transition-all ${filter === option.value
+                      ? 'bg-[#00d4ff]/10 text-[#00d4ff] border border-[#00d4ff]/30'
+                      : 'hover:bg-white/5 text-[#8a8a9f]'
+                      }`}
                   >
                     {option.label}
                   </button>
@@ -256,7 +283,7 @@ const getTaskRoast = (task) => {
               </div>
             </div>
           </div>
-          
+
           <div className="flex-1">
             <div className="space-y-4">
               {filteredTasks.map((task) => (
@@ -292,7 +319,7 @@ const getTaskRoast = (task) => {
                       </button>
                     </div>
                   </div>
-                  
+
                   {/* Simple Roast Comment - No NPC, no label */}
                   <div className="bg-gradient-to-br from-[#ff6b35]/10 via-[#1a1a28] to-[#ff3366]/10 border border-[#ff6b35]/30 rounded-xl p-4 backdrop-blur-sm">
                     <p className="text-sm italic text-[#e8e8f0]">"{getTaskRoast(task)}"</p>
@@ -300,7 +327,7 @@ const getTaskRoast = (task) => {
                 </div>
               ))}
             </div>
-            
+
             <button
               onClick={() => setIsAddingTask(true)}
               className="fixed bottom-8 right-8 bg-gradient-to-r from-[#00d4ff] to-[#9d4edd] text-white px-6 py-4 rounded-full shadow-2xl hover:shadow-[#00d4ff]/50 transition-all flex items-center gap-3 font-bold"
@@ -311,15 +338,15 @@ const getTaskRoast = (task) => {
           </div>
         </div>
       </div>
-      
-      <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
+
+      {/* <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
         <DialogContent className="bg-[#151520] border-white/10 text-white max-w-2xl">
           {selectedTask && (
             <>
               <DialogHeader>
                 <DialogTitle className="text-2xl text-white">{selectedTask.title}</DialogTitle>
               </DialogHeader>
-              
+
               <div className="space-y-6 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -335,15 +362,15 @@ const getTaskRoast = (task) => {
                     <div className="text-[#ff3366]">+{selectedTask.despairContribution || 0}</div>
                   </div>
                 </div>
-                
+
                 <div>
                   <div className="text-sm text-[#8a8a9f] mb-3">Commentary</div>
                   <div className="bg-[#1a1a28] border border-white/5 rounded-lg p-4">
                     <p className="italic text-white">"{getTaskRoast(selectedTask)}"</p>
                   </div>
                 </div>
-                
-                <Button 
+
+                <Button
                   onClick={() => {
                     handleDeleteTask(selectedTask._id);
                     setSelectedTask(null);
@@ -357,17 +384,17 @@ const getTaskRoast = (task) => {
           )}
         </DialogContent>
       </Dialog>
-      
+
       <Dialog open={isAddingTask} onOpenChange={setIsAddingTask}>
         <DialogContent className="bg-[#151520] border-white/10 text-white">
           <DialogHeader>
             <DialogTitle className="text-white">Add New Task</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div>
               <Label className="text-white">Task Title</Label>
-              <Input 
+              <Input
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 placeholder="Be honest… will you actually do this?"
@@ -376,7 +403,137 @@ const getTaskRoast = (task) => {
             </div>
             <div>
               <Label className="text-white">Deadline</Label>
-              <Input 
+              <Input
+                type="date"
+                value={newDeadline}
+                onChange={(e) => setNewDeadline(e.target.value)}
+                className="bg-[#1a1a28] border-white/10 text-white"
+              />
+            </div>
+            <Button
+              onClick={handleAddTask}
+              className="w-full bg-[#00d4ff] text-black hover:bg-[#00d4ff]/90"
+            >
+              Add Task (and Regret)
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div> */}
+      <Dialog open={!!selectedTask} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedTask(null);
+          setIsEditingTask(false);
+        }
+      }}>
+        <DialogContent className="bg-[#151520] border-white/10 text-white max-w-2xl">
+          {selectedTask && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl text-white">{selectedTask.title}</DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-6 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm text-[#8a8a9f] mb-1">Status</div>
+                    {isEditingTask ? (
+                      <select
+                        value={editedStatus}
+                        onChange={(e) => setEditedStatus(e.target.value)}
+                        className="bg-[#1a1a28] border border-white/10 text-white rounded p-1 w-full outline-none"
+                      >
+                        <option value={selectedTask.status} disabled>Current: {selectedTask.status}</option>
+                        <option value="done">Completed</option>
+                      </select>
+                    ) : (
+                      getStatusBadge(selectedTask.status)
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-sm text-[#8a8a9f] mb-1">Deadline</div>
+                    <div className="text-white">{selectedTask.deadline?.slice(0, 10)}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-[#8a8a9f] mb-1">Despair Contribution</div>
+                    <div className="text-[#ff3366]">+{selectedTask.despairContribution || 0}</div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm text-[#8a8a9f] mb-3">NPC Commentary</div>
+                  {(!selectedTask.npcComments || selectedTask.npcComments.length === 0) ? (
+                    <p className="text-sm italic text-gray-400">No NPC comments yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {selectedTask.npcComments.map((comment, idx) => (
+                        <div key={idx} className="bg-[#1a1a28] border border-white/5 rounded-lg p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="text-2xl">
+                              {getNpcEmoji(comment.npc)}
+                            </div>
+                            <div>
+                              <div className="text-[#ff6b35] font-medium mb-1">{comment.npc || 'NPC'}</div>
+                              <p className="italic text-white">"{comment.comment}"</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {isEditingTask ? (
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => setIsEditingTask(false)}
+                      className="flex-1 bg-gray-600 hover:bg-gray-700"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleUpdateTask}
+                      className="flex-1 bg-[#00d4ff] text-black hover:bg-[#00d4ff]/90"
+                    >
+                      Save Changes
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => {
+                      setEditedStatus(selectedTask.status);
+                      setIsEditingTask(true);
+                    }}
+                    className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white"
+                  >
+                    Edit Task
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddingTask} onOpenChange={setIsAddingTask}>
+        <DialogContent className="bg-[#151520] border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">Add New Task</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-white">Task Title</Label>
+              <Input
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="Be honest… will you actually do this?"
+                className="bg-[#1a1a28] border-white/10 text-white placeholder:text-[#8a8a9f] placeholder:italic"
+              />
+            </div>
+            <div>
+              <Label className="text-white">Deadline</Label>
+              <Input
                 type="date"
                 value={newDeadline}
                 onChange={(e) => setNewDeadline(e.target.value)}
@@ -393,5 +550,6 @@ const getTaskRoast = (task) => {
         </DialogContent>
       </Dialog>
     </div>
+
   );
 }
