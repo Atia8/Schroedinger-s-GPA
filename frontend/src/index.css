@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root { 
+    --despair-intensity: 0; 
+  }
+  
+  .despair-extinction .bg-\[#2C2C2E\] {
+    animation: extinction-pulse 3s ease-in-out infinite;
+  }
+  
+  @keyframes extinction-pulse {
+    0%, 100% { background-color: #2C2C2E; }
+    50% { background-color: #3a1a20; }
+  }
+  
+  /* Adds a slow pulse for Panic state cards */
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
