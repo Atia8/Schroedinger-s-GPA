@@ -12,4 +12,7 @@ router.get('/', taskController.getTasks);
 router.delete('/:id', taskController.deleteTask);
 router.patch('/:id', taskController.updateTask);
 
+// NEW: Schrödinger toggle route (Fixed: removed the auth object)
+router.patch('/:id/schrodinger', taskController.toggleSchrodinger);
+
 module.exports = router;
