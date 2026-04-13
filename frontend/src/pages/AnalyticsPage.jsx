@@ -13,11 +13,11 @@ export function AnalyticsPage({ sarcasmLevel = 'brutal' }) {
     ignoredTasks: 0,
     panicTasks: 0,
     averageDespair: 0,
-    peakHour: '12AM',
+    peakHour: 'N/A',
     averageDelay: 0,
     timeWasted: 0,
-    mostProductiveDay: 'Monday',
-    leastProductiveDay: 'Monday'
+    mostProductiveDay: 'N/A',
+    leastProductiveDay: 'N/A'
   });
 
   // Weekly data for chart
@@ -90,7 +90,7 @@ export function AnalyticsPage({ sarcasmLevel = 'brutal' }) {
 
     // Basic stats
     const totalTasks = tasksData.length;
-    const completedTasks = tasksData.filter(t => t.status === 'done').length;
+    const completedTasks = tasksData.filter(t => t.status === 'done' || t.status === 'completed').length;
     const overdueTasks = tasksData.filter(t => t.status === 'overdue').length;
     const ignoredTasks = tasksData.filter(t => t.status === 'ignored').length;
     const panicTasks = tasksData.filter(t => t.status === 'panic').length;
@@ -103,9 +103,9 @@ export function AnalyticsPage({ sarcasmLevel = 'brutal' }) {
     let totalDelay = 0;
     let delayCount = 0;
     tasksData.forEach(task => {
-      if (task.deadline && task.completedAt) {
+      if (task.deadline && (task.status === 'done' || task.status === 'completed') && task.updatedAt) {
         const deadline = new Date(task.deadline);
-        const completed = new Date(task.completedAt);
+        const completed = new Date(task.updatedAt);
         if (completed > deadline) {
           const delayDays = Math.ceil((completed - deadline) / (1000 * 60 * 60 * 24));
           totalDelay += delayDays;
@@ -131,7 +131,7 @@ export function AnalyticsPage({ sarcasmLevel = 'brutal' }) {
         const dayData = weeklyStats.find(d => d.day === dayName);
         if (dayData) {
           dayData.total++;
-          if (task.status === 'done') {
+          if (task.status === 'done' || task.status === 'completed') {
             dayData.completed++;
           } else if (['ignored', 'overdue', 'panic'].includes(task.status)) {
             dayData.avoided++;
@@ -143,8 +143,8 @@ export function AnalyticsPage({ sarcasmLevel = 'brutal' }) {
     // Find most/least productive days
     let maxCompleted = 0;
     let minCompleted = Infinity;
-    let mostProductiveDay = 'Monday';
-    let leastProductiveDay = 'Monday';
+    let mostProductiveDay = 'N/A';
+    let leastProductiveDay = 'N/A';
 
     weeklyStats.forEach(day => {
       if (day.completed > maxCompleted) {
@@ -161,8 +161,8 @@ export function AnalyticsPage({ sarcasmLevel = 'brutal' }) {
     const hourlyStats = hourlyData.map(h => ({ ...h, tasks: 0, completed: 0 }));
 
     tasksData.forEach(task => {
-      if (task.completedAt) {
-        const date = new Date(task.completedAt);
+      if ((task.status === 'done' || task.status === 'completed') && task.updatedAt) {
+        const date = new Date(task.updatedAt);
         const hour = date.getHours();
         const hourLabel = hour === 0 ? '12AM' : 
                          hour < 12 ? `${hour}AM` : 
@@ -183,7 +183,7 @@ export function AnalyticsPage({ sarcasmLevel = 'brutal' }) {
 
     // Find peak hour
     let maxTasks = 0;
-    let peakHour = '12AM';
+    let peakHour = 'N/A';
     hourlyStats.forEach(hour => {
       if (hour.completed > maxTasks) {
         maxTasks = hour.completed;
