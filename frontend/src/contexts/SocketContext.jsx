@@ -18,7 +18,7 @@ export const SocketProvider = ({ children }) => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    // Connect to socket server (just like your chat apps!)
+    // Connect to socket server
     const newSocket = io('http://localhost:5000', {
       auth: { token },
       transports: ['websocket']
@@ -26,18 +26,18 @@ export const SocketProvider = ({ children }) => {
 
     // Connection events
     newSocket.on('connect', () => {
-      console.log('🔌 Connected to notification server');
+      console.log('Connected to notification server');
       setIsConnected(true);
     });
 
     newSocket.on('disconnect', () => {
-      console.log('🔌 Disconnected from notification server');
+      console.log('Disconnected from notification server');
       setIsConnected(false);
     });
 
     // Handle incoming notifications
     newSocket.on('notification', (notification) => {
-      console.log('📨 Received notification:', notification);
+      console.log('Received notification:', notification);
       
       if (notification.type === 'unread_count') {
         setUnreadCount(notification.count);

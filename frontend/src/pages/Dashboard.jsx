@@ -66,12 +66,7 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Manual test button function
-  const testDespairAlert = async () => {
-    console.log('🔔 Manually testing despair alert...');
-    await triggerDespairCheck();
-    alert('Despair check triggered! Check your bell icon for notification.');
-  };
+
 
   const triggerEffect = (effect) => {
     setActiveEffect(effect);
@@ -109,15 +104,7 @@ export default function Dashboard() {
           </div>
         </div>
         
-        {/* Test Button for Despair Alerts */}
-        <button
-          onClick={testDespairAlert}
-          className="text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded-lg transition-colors flex items-center gap-1"
-          title="Test Despair Alert"
-        >
-          <Bell size={12} />
-          Test Alert
-        </button>
+  
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

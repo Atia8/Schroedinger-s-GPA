@@ -12,10 +12,9 @@ router.use((req, res, next) => {
 
 router.use(authMiddleware.authenticateToken);
 
-
 // In notificationRoutes.js
 router.post('/check-despair', authMiddleware.authenticateToken, async (req, res) => {
-  console.log('🚨🚨🚨 CHECK-DESPAIR ENDPOINT WAS CALLED! 🚨🚨🚨');
+  console.log('CHECK-DESPAIR ENDPOINT WAS CALLED');
   
   try {
     const socketManager = req.app.get('socketManager');
@@ -27,7 +26,7 @@ router.post('/check-despair', authMiddleware.authenticateToken, async (req, res)
     
     await notificationService.checkAndCreateDespairAlert(req.user.userId);
     
-    console.log('✅ Despair check completed');
+    console.log('Despair check completed');
     res.json({ success: true, message: 'Despair check completed' });
   } catch (error) {
     console.error('Despair check error:', error);

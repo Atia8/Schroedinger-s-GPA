@@ -26,14 +26,14 @@ exports.createTask = async (req, res) => {
     const socketManager = req.app.get('socketManager');
     const notifService = getNotificationService(socketManager);
 
-    // 🎯 FIXED: Status is 'overdue' if deadline passed, otherwise 'ignored'
+    // Status is 'overdue' if deadline passed, otherwise 'ignored'
     const newTask = new Task({
       user: req.user.userId,
       title,
       deadline,
       description,
       escalationLevel: "normal",
-      status: new Date(deadline) < new Date() ? 'overdue' : 'ignored',  // ← Changed from 'pending' to 'ignored'
+      status: new Date(deadline) < new Date() ? 'overdue' : 'ignored',
     });
 
     newTask.despairContribution = calculateDespair(newTask);
@@ -47,7 +47,7 @@ exports.createTask = async (req, res) => {
     if (hoursUntilDeadline <= 24 && hoursUntilDeadline > 0) {
       await notifService.createNotification(req.user.userId, {
         type: 'deadline',
-        title: '⏰ Deadline Approaching!',
+        title: 'Deadline Approaching',
         message: `"${title}" is due in ${Math.ceil(hoursUntilDeadline)} hours.`,
         metadata: {
           taskId: savedTask._id,
@@ -112,7 +112,7 @@ exports.updateTask = async (req, res) => {
     if (req.body.status === 'done' && oldTask.status !== 'done') {
       await notifService.createNotification(req.user.userId, {
         type: 'achievement',
-        title: '✅ Task Completed!',
+        title: 'Task Completed',
         message: `You finished "${updatedTask.title}". Nice!`,
         metadata: {
           taskId: updatedTask._id,

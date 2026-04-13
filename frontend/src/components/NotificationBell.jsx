@@ -39,7 +39,7 @@ const NotificationBell = () => {
     return () => window.removeEventListener('new-notification', handleNewNotification);
   }, []);
 
-  // Mark as read via WebSocket (instant!)
+  // Mark as read via WebSocket (instant)
   const handleMarkAsRead = async (id) => {
     markAsRead(id); // WebSocket method
     

@@ -15,7 +15,7 @@ const taskRoutes = require("./routes/taskRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 
-// Import socket manager - FIX THIS LINE
+// Import socket manager
 const SocketManager = require("./socket/socketManager");
 
 const app = express();
@@ -27,7 +27,7 @@ const io = socketIo(server, {
   }
 });
 
-// Initialize socket manager - MAKE SURE THIS IS AFTER io is defined
+// Initialize socket manager
 const socketManager = new SocketManager(io);
 
 // Make socketManager available to routes
@@ -45,9 +45,9 @@ app.use(express.json());
 // Connect to MongoDB
 mongoose
   .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/academic-victim")
-  .then(() => console.log("✅ Connected to MongoDB"))
+  .then(() => console.log("Connected to MongoDB"))
   .catch(err => {
-    console.error("❌ MongoDB connection error:", err);
+    console.error("MongoDB connection error:", err);
     process.exit(1);
   });
 
@@ -74,7 +74,6 @@ app.get("/", (req, res) => {
   });
 });
 
-
 cron.schedule('0 */6 * * *', async () => {
   console.log('Running contextual roast check...');
   
@@ -84,10 +83,8 @@ cron.schedule('0 */6 * * *', async () => {
   await notificationService.checkAndSendContextualRoasts();
 });
 
-
-
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🔌 WebSocket server ready`);
+  console.log(`Server running on port ${PORT}`);
+  console.log(`WebSocket server ready`);
 });
