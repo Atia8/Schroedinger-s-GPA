@@ -93,12 +93,7 @@ server.listen(PORT, () => {
   console.log(`WebSocket server ready`);
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ROUTE FILES YOU NEED TO UPDATE (not included as I don't have those files):
-//
-// backend/routes/taskRoutes.js — add:
-//   router.patch('/:id/schrodinger', auth, taskController.toggleSchrodinger);
-//
-// backend/routes/dashboardRoutes.js — add:
-//   router.post('/accept-fate', auth, dashboardController.acceptFate);
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
+
