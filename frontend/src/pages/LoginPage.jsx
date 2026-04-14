@@ -10,11 +10,13 @@ export function LoginPage({ onLogin }) {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
 
     try {
@@ -27,7 +29,7 @@ export function LoginPage({ onLogin }) {
         body: JSON.stringify({ 
           email, 
           password, 
-          ...(isSignup && { username: name }) // Fixed: removed extra space before name
+          ...(isSignup && { username: name })
         }),
       });
 
@@ -37,13 +39,23 @@ export function LoginPage({ onLogin }) {
         throw new Error(data.message || 'Authentication failed');
       }
 
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+      if (isSignup) {
+        // After successful signup, redirect to login
+        setSuccess('Account created successfully! Please log in.');
+        setIsSignup(false);
+        // Clear password field for security
+        setPassword('');
+        // Optionally clear name but keep email for convenience
+        setName('');
+      } else {
+        // Handle login
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
+        onLogin();
+        navigate('/dashboard', { replace: true });
       }
-
-      onLogin();
-      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -130,6 +142,12 @@ export function LoginPage({ onLogin }) {
               </div>
             )}
 
+            {success && (
+              <div className="mb-5 p-4 bg-green-900/30 border border-green-700 rounded-lg text-green-200 text-sm text-center">
+                {success}
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-5">
               {isSignup && (
                 <div>
@@ -161,21 +179,22 @@ export function LoginPage({ onLogin }) {
                 />
               </div>
 
-           <div>
-  <label className="block text-sm text-gray-300 mb-2">
-    Password
-  </label>
-  <input
-    type="password"
-    value={password}
-    onChange={(e) => setPassword(e.target.value)}
-    placeholder={isSignup 
-      ? "Make it strong. Unlike your willpower." 
-      : "Your secret key (we won't judge)"}
-    className="w-full bg-[#2a2a38] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#00d9ff] focus:ring-2 focus:ring-[#00d9ff]/20 transition-all"
-    required
-  />
-</div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={isSignup 
+                    ? "Make it strong. Unlike your willpower." 
+                    : "Your secret key (we won't judge)"}
+                  className="w-full bg-[#2a2a38] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#00d9ff] focus:ring-2 focus:ring-[#00d9ff]/20 transition-all"
+                  required
+                />
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
@@ -191,7 +210,11 @@ export function LoginPage({ onLogin }) {
 
             <div className="mt-6 text-center">
               <button
-                onClick={() => setIsSignup(!isSignup)}
+                onClick={() => {
+                  setIsSignup(!isSignup);
+                  setError('');
+                  setSuccess('');
+                }}
                 className="text-sm text-gray-400 hover:text-[#00d9ff] transition-colors"
               >
                 {isSignup 
