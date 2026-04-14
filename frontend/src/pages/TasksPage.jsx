@@ -49,6 +49,28 @@ export default function TasksPage() {
   const [sarcasmLevel, setSarcasmLevel]     = useState('brutal');
   const [schrodingerLoading, setSchrodingerLoading] = useState(null); // taskId being toggled
 
+  const processTasks = (tasksList) => {
+    const now = new Date();
+    const endOfTomorrow = new Date();
+    endOfTomorrow.setDate(endOfTomorrow.getDate() + 1);
+    endOfTomorrow.setHours(23, 59, 59, 999);
+
+    return tasksList.map(t => {
+      const task = { ...t };
+      if (task.status !== 'done' && task.status !== 'completed') {
+        const deadline = new Date(task.deadline);
+        if (deadline < now) {
+          task.status = 'overdue';
+          task.escalationLevel = 'hysterical';
+        } else if (deadline <= endOfTomorrow || (deadline - now) / (1000 * 60 * 60) <= 24) {
+          task.status = 'panic';
+          task.escalationLevel = 'panic';
+        }
+      }
+      return task;
+    });
+  };
+
   const fetchData = async () => {
     const token = localStorage.getItem('token');
     try {
@@ -59,7 +81,7 @@ export default function TasksPage() {
       const userData  = await userRes.json();
       const tasksData = await tasksRes.json();
       setSarcasmLevel(userData.user?.sarcasmLevel || 'brutal');
-      setTasks(tasksData);
+      setTasks(processTasks(tasksData));
     } catch (err) {
       console.error('Failed to fetch data:', err);
     } finally {
@@ -89,8 +111,8 @@ export default function TasksPage() {
       });
       if (res.ok) {
         const { task } = await res.json();
-        setTasks(prev => prev.map(t => t._id === task._id ? task : t));
-        if (selectedTask?._id === taskId) setSelectedTask(task);
+        setTasks(prev => processTasks(prev.map(t => t._id === task._id ? task : t)));
+        if (selectedTask?._id === taskId) setSelectedTask(processTasks([task])[0]);
       }
     } catch (err) {
       console.error('Schrödinger toggle failed:', err);
@@ -184,8 +206,8 @@ export default function TasksPage() {
       });
       if (res.ok) {
         const updatedTask = await res.json();
-        setTasks(prev => prev.map(t => t._id === updatedTask._id ? updatedTask : t));
-        setSelectedTask(updatedTask);
+        setTasks(prev => processTasks(prev.map(t => t._id === updatedTask._id ? updatedTask : t)));
+        setSelectedTask(processTasks([updatedTask])[0]);
         setIsEditingTask(false);
       }
     } catch (err) { console.error(err); }
@@ -202,7 +224,7 @@ export default function TasksPage() {
         body:    JSON.stringify({ title: newTitle, deadline: newDeadline }), // Sending the exact user-picked time
       });
       const data = await res.json();
-      setTasks([data, ...tasks]);
+      setTasks(processTasks([data, ...tasks]));
       setNewTitle('');
       setNewDeadline('');
       setIsAddingTask(false);
@@ -247,7 +269,14 @@ export default function TasksPage() {
     { value: 'done',    label: 'Completed' },
   ];
 
-  const filteredTasks = filter === 'all' ? tasks : tasks.filter(t => t.status === filter);
+  const filteredTasks = filter === 'all' 
+    ? tasks 
+    : tasks.filter(t => {
+        if (filter === 'panic') {
+          return t.escalationLevel === 'panic' || t.escalationLevel === 'hysterical' || t.status === 'panic';
+        }
+        return t.status === filter;
+      });
 
   if (loading) {
     return (
