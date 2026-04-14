@@ -194,11 +194,12 @@ export default function TasksPage() {
   const handleAddTask = async () => {
     const token = localStorage.getItem('token');
     if (!newTitle || !newDeadline) return;
+
     try {
       const res = await fetch('http://localhost:5000/api/tasks', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ title: newTitle, deadline: newDeadline }),
+        body:    JSON.stringify({ title: newTitle, deadline: newDeadline }), // Sending the exact user-picked time
       });
       const data = await res.json();
       setTasks([data, ...tasks]);
@@ -301,6 +302,12 @@ export default function TasksPage() {
                     ? HYSTERICAL_NPC_LINES[Math.floor(Math.random() * HYSTERICAL_NPC_LINES.length)]
                     : null;
 
+                  // Format the deadline to show both date and time nicely
+                  const formattedDeadline = new Date(task.deadline).toLocaleString([], {
+                    dateStyle: 'short',
+                    timeStyle: 'short'
+                  });
+
                   return (
                     <motion.div
                       key={task._id}
@@ -334,7 +341,7 @@ export default function TasksPage() {
                           <div className="flex items-center gap-4 text-sm text-[#8a8a9f]">
                             <div className="flex items-center gap-2">
                               <Calendar size={16} />
-                              Due: {task.deadline.slice(0, 10)}
+                              Due: {formattedDeadline}
                             </div>
                             <div className="flex items-center gap-2">
                               <TrendingUp size={16} />
@@ -451,7 +458,9 @@ export default function TasksPage() {
                   </div>
                   <div>
                     <div className="text-sm text-[#8a8a9f] mb-1">Deadline</div>
-                    <div className="text-white">{selectedTask.deadline?.slice(0, 10)}</div>
+                    <div className="text-white">
+                      {new Date(selectedTask.deadline).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                    </div>
                   </div>
                   <div>
                     <div className="text-sm text-[#8a8a9f] mb-1">Despair Contribution</div>
@@ -579,7 +588,7 @@ export default function TasksPage() {
             <div>
               <Label className="text-white">Deadline</Label>
               <Input
-                type="date"
+                type="datetime-local"
                 value={newDeadline}
                 onChange={(e) => setNewDeadline(e.target.value)}
                 className="bg-[#1a1a28] border-white/10 text-white"

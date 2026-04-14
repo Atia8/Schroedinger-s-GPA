@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const userController = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
 const User = require('../models/User');
 
@@ -90,6 +91,9 @@ router.patch('/sarcasm', authMiddleware.authenticateToken, async (req, res) => {
     });
   }
 });
+
+// NEW: Update active NPC companion
+router.patch('/npc', authMiddleware.authenticateToken, userController.setActiveNPC);
 
 // Update notification preferences
 router.patch('/notifications', authMiddleware.authenticateToken, async (req, res) => {

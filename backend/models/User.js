@@ -1,4 +1,5 @@
 // backend/models/User.js
+// CHANGED: Added `activeNPC` field. Everything else is identical to what you had.
 const mongoose = require("mongoose");
 const bcrypt   = require("bcryptjs");
 
@@ -35,10 +36,17 @@ const userSchema = new mongoose.Schema({
     despairAlerts:     { type: Boolean, default: true  }
   },
 
-  // ── ADDED: NPC relationship memory ────────────────────────────────────────
-  // Each NPC tracks how the relationship has evolved based on the user's history.
-  // Transitions: neutral → concerned → disappointed → given_up → impressed
-  // 'impressed' is achievable by going on a completion streak after a low point.
+  // ── ADDED: Active NPC companion ────────────────────────────────────────────
+  // Controls whose voice is used for all commentary (dashboard, tasks, notifications).
+  // 'theMirror' is only settable once worstEverDespair >= 80 — enforced in the
+  // PATCH /api/users/npc controller.
+  activeNPC: {
+    type:    String,
+    enum:    ['hostileMentor', 'chaoticFriend', 'momFriend', 'theMirror'],
+    default: 'hostileMentor'
+  },
+
+  // ── NPC relationship memory ────────────────────────────────────────────────
   npcRelationshipState: {
     hostileMentor: {
       type:    String,
@@ -57,27 +65,13 @@ const userSchema = new mongoose.Schema({
     }
   },
 
-  // ── ADDED: Despair history ─────────────────────────────────────────────────
-  worstEverDespair: {
-    type:    Number,
-    default: 0
-  },
-  // Used to compute despairDelta on each dashboard load
-  lastDespairScore: {
-    type:    Number,
-    default: 0
-  },
+  // ── Despair history ────────────────────────────────────────────────────────
+  worstEverDespair:  { type: Number, default: 0 },
+  lastDespairScore:  { type: Number, default: 0 },
 
-  // ── ADDED: Acceptance button counter ──────────────────────────────────────
-  // Clicking "I Accept My Fate" 3+ times in a week unlocks the Zen of Failure ritual.
-  acceptanceClicks: {
-    type:    Number,
-    default: 0
-  },
-  lastAcceptanceAt: {
-    type:    Date,
-    default: null
-  }
+  // ── Acceptance button counter ──────────────────────────────────────────────
+  acceptanceClicks:  { type: Number, default: 0 },
+  lastAcceptanceAt:  { type: Date,   default: null }
 
 }, { timestamps: true });
 

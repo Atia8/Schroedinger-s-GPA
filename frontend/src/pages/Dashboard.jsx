@@ -58,9 +58,12 @@ export default function Dashboard() {
     fetchDashboard();
     window.addEventListener('sarcasmChanged',    fetchDashboard);
     window.addEventListener('refreshDashboard',  fetchDashboard);
+    window.addEventListener('npcChanged',        fetchDashboard); // Added so it updates instantly from portal
+    
     return () => {
       window.removeEventListener('sarcasmChanged',   fetchDashboard);
       window.removeEventListener('refreshDashboard', fetchDashboard);
+      window.removeEventListener('npcChanged',       fetchDashboard);
     };
   }, []);
 
@@ -148,27 +151,31 @@ export default function Dashboard() {
     return ['🧘', '🍵', '✨', '🛌', '🐢', '🌸'];
   };
 
-  // ── NPC identity based on sarcasm + relationship state ──────────────────────
+  // ── RECOMMENDED POLISH: NPC identity based on active NPC + relationship state 
   const getNpcDisplay = () => {
-    const relState = data?.npcRelationshipState?.hostileMentor || 'neutral';
+    const npcId = data?.activeNPC || 'hostileMentor';
+    const NPC_META = {
+      hostileMentor: { name: 'The Hostile Mentor', emoji: '👨‍🏫' },
+      chaoticFriend: { name: 'The Chaotic Friend', emoji: '🤪' },
+      momFriend:     { name: 'The Mom Friend',     emoji: '🤱' },
+      theMirror:     { name: 'The Mirror',         emoji: '🪞' },
+    };
+    
+    const npc = NPC_META[npcId] || NPC_META.hostileMentor;
+    const relState = npcId !== 'theMirror' ? data?.npcRelationshipState?.[npcId] : null;
+    
     const stateLabels = {
-      neutral:     '',
-      concerned:   ' [concerned]',
-      disappointed:' [tired of this]',
-      given_up:    ' [given up]',
-      impressed:   ' [reluctantly impressed]',
+      neutral: '', 
+      concerned: ' [concerned]', 
+      disappointed: ' [tired of this]',
+      given_up: ' [given up]', 
+      impressed: ' [reluctantly impressed]',
     };
-    const names = {
-      damage: 'The Destroyer',
-      brutal: 'Honest Friend',
-      mild:   'Passive Mentor',
+    
+    return {
+      name:  npc.name + (relState ? (stateLabels[relState] || '') : ''),
+      emoji: npc.emoji,
     };
-    const emojis = {
-      damage: '💀', brutal: '😈', mild: '😐',
-    };
-    const name  = names[sarcasmLevel] || 'Honest Friend';
-    const emoji = emojis[sarcasmLevel] || '😈';
-    return { name: name + (stateLabels[relState] || ''), emoji };
   };
 
   // ── Loading ────────────────────────────────────────────────────────────────

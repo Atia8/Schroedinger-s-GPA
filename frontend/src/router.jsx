@@ -7,6 +7,7 @@ import TasksPage from "./pages/TasksPage";
 import SettingsPage from "./pages/SettingsPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { LoginPage } from "./pages/LoginPage";
+import NPCPortalPage from './pages/NPCPortalPage';
 
 export default function Router() {
   // Initialize isLoggedIn from localStorage immediately, not just in useEffect
@@ -132,6 +133,21 @@ export default function Router() {
                   onSarcasmChange={handleSarcasmChange}
                   onLogout={handleLogout}
                 />
+              </>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        {/* NEW: NPC Portal Route */}
+        <Route
+          path="/npc"
+          element={
+            isLoggedIn ? (
+              <>
+                <Navbar onLogout={handleLogout} />
+                <NPCPortalPage />
               </>
             ) : (
               <Navigate to="/login" replace />
